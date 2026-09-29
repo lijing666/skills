@@ -1,0 +1,27 @@
+# import-linter 契约示例（Python，测试期执法）
+# 放入 pyproject.toml；运行：lint-imports（或挂进 CI）
+[tool.importlinter]
+root_package = "myproject"
+
+# 契约1：模块内部文件私有——其他模块只能 import 模块入口
+[[tool.importlinter.contracts]]
+name = "payment internals are private"
+type = "forbidden"
+source_modules = ["myproject.modules.order", "myproject.modules.inventory"]
+forbidden_modules = ["myproject.modules.payment.internals"]
+
+# 契约2：分层——services 不得被其他层反向依赖
+[[tool.importlinter.contracts]]
+name = "layered architecture"
+type = "layers"
+layers = [
+    "myproject.api",
+    "myproject.services",
+    "myproject.repositories",
+]
+
+# 契约3：两模块互相独立（禁循环依赖）
+[[tool.importlinter.contracts]]
+name = "order and inventory are independent"
+type = "independence"
+modules = ["myproject.modules.order", "myproject.modules.inventory"]

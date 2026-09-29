@@ -1,0 +1,18 @@
+# GitHub Actions：越界改动检测 job（追加到现有 ci.yml 的 jobs: 下）
+# 依赖：任务卡边界导出为 boundary.txt（一行一个 glob），随 PR 提交
+jobs:
+  boundary-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要完整历史以 diff 基准分支
+      - name: 越界改动检测
+        run: |
+          chmod +x .github/scripts/boundary-check.sh
+          .github/scripts/boundary-check.sh origin/${{ github.base_ref }} .github/task-boundary.txt
+
+# boundary.txt 示例（对应 TASK-04 的边界区块）：
+#   modules/payment/deposit.py
+#   modules/payment/__tests__/*
+#   # 注释行与空行被忽略
