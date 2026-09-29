@@ -1,6 +1,6 @@
 # 契约强度工具箱（按语言）
 
-> 用途：步骤 ② 选执法工具、写架构约束。核心原则：**架构规则必须机器可执行**——能用工具表达的绝不写成文档，文档只写机器表达不了的"为什么"。
+> 用途：规则先行阶段选执法工具、写架构约束时。核心原则：**架构规则必须机器可执行**——能用工具表达的绝不写成文档，文档只写机器表达不了的"为什么"。
 
 ## 契约强度光谱（排序原则，非选型结论）
 
@@ -14,12 +14,12 @@
 
 ## 跨语言执法工具表
 
-| 拦截时机 | Python | Java | JS/TS | Go |
-|---|---|---|---|---|
-| 编译/语言级 | （无，靠测试期补） | Kotlin `internal`（按 Gradle 模块） | TS project refs | 小写私有（语言级） |
-| lint 期 | Ruff TID251（banned-api） | Checkstyle ImportControl | ESLint `no-restricted-imports` | — |
-| 测试期 | **import-linter**（声明式 contracts，首选） | **ArchUnit**（事实标准，`.because()` 可带 ADR 引用） | dependency-cruiser | go-arch-lint |
-| CI 期 | git diff 扫 import 的 20 行脚本 | Maven Enforcer | 同左 | 同左 |
+| 拦截时机   | Python                              | Java                                      | JS/TS                          | Go           |
+| ------ | ----------------------------------- | ----------------------------------------- | ------------------------------ | ------------ |
+| 编译/语言级 | （无，靠测试期补）                           | Kotlin `internal`（按 Gradle 模块）            | TS project refs                | 小写私有（语言级）    |
+| lint 期 | Ruff TID251（banned-api）             | Checkstyle ImportControl                  | ESLint `no-restricted-imports` | —            |
+| 测试期    | **import-linter**（声明式 contracts，首选） | **ArchUnit**（事实标准，`.because()` 可带 ADR 引用） | dependency-cruiser             | go-arch-lint |
+| CI 期   | git diff 扫 import 的 20 行脚本          | Maven Enforcer                            | 同左                             | 同左           |
 
 ## 语言要点
 

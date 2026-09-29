@@ -1,6 +1,6 @@
 # 架构设计文档（HLD）模板 + 方案三查
 
-> 用途：步骤 ④。AI 起草，**人必须批准**。喂给 AI 的上下文：Spec + 相关 ADR + 涉及模块的契约文件（api.ts / __init__ / interface）+ 模块级 AGENTS.md。
+> 用途：架构方案（HLD）起草与批准阶段——AI 起草，**人必须批准**。喂给 AI 的上下文：Spec + 相关 ADR + 涉及模块的契约文件（api.ts / __init__ / interface）+ 模块级 AGENTS.md。
 
 ## 模板
 
