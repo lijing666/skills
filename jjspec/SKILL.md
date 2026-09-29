@@ -30,7 +30,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 |---|---|---|
 | ① 架构预检 | 影响面扫描 + 上下文供给检查（高风险区规则/ADR 是否齐） | onboarding 已有则跳过 |
 | ② 规则先行 | 高风险区先补 AGENTS.md 规则与 ADR | assets/AGENTS.md.template, adr-template |
-| ③ 写 Spec | 验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md |
+| ③ 写 Spec | 需求 ≥3 张任务卡 → 先写 PRD（宪法约束）再逐卡拆 Spec；小需求直接 Spec。验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md, prd-* |
 | ④ AI 起草方案，人批准 | 查边界 / 查方向 / 查遗漏；产出打回意见 + 隐性约定（当天回流 L2） | hld-template.md 的三查节 |
 | ⑤ 任务卡 DAG | 单卡=单模块=单窗口=单PR；拆出依赖图，无环校验 | taskcard-template.md |
 | ⑥ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
@@ -48,6 +48,8 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 |---|---|
 | `references/principles-v1.md` | 设计决策拿不准时；用户问"为什么这么要求"时 |
 | `references/spec-template.md` | 步骤 ③ |
+| `references/prd-constitution.md` | 写 PRD / 需求文档 / 需求变更前必读 |
+| `references/prd-template.md` | 大需求（≥3 张任务卡）立项写 PRD 时 |
 | `references/hld-template.md` | 步骤 ④ |
 | `references/taskcard-template.md` | 步骤 ⑤ |
 | `references/adr-template.md` | 步骤 ②④⑨ 需要记录决策时 |
