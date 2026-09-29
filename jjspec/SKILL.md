@@ -63,11 +63,12 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 - `assets/boundary-check.sh`：越界检测——PR diff 对照任务卡声明的文件边界，超出即失败
 - `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查 job
 
-## 三条设计铁律（维护本 skill 时不可违反）
+## 四条设计铁律（维护本 skill 时不可违反）
 
 1. **SKILL.md 永不超 150 行**——细节一律下沉 references，防止 2000 行文档病（注意力稀释）
 2. **规则必配物料**——纯文字规则是文档期最软契约；能机器执法的给配置、给脚本
 3. **机制归 skill，内容归项目**——回流教训写进项目的 AGENTS.md/ADR/知识库；skill 自身升级由人控节奏（第二条循环）
+4. **references 必须自包含**——编号（步骤 ⑨）、场景代号（场景 A）离开 SKILL.md 就无上下文；references 内一律用阶段名/内容名自描述，跨文件代号只允许出现在 SKILL.md
 
 ## 输出纪律
 
