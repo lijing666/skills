@@ -28,15 +28,15 @@ skills/
 ./sync.sh ~/.trae/skills
 ```
 
-## 各工具技能目录速查
+## 各工具技能目录速查（已在本机验证）
 
 | 工具 | 技能目录 |
 | --- | --- |
 | WorkBuddy | `~/.workbuddy/skills/` |
-| CodeBuddy | 以其官方文档为准，常见为 `~/.codebuddy/skills/` |
-| Trae | 以其官方文档为准，常见为 `~/.trae/skills/` |
+| CodeBuddy | `~/.codebuddy/skills/`（官方文档：用户级自定义 Skills 目录，装完用 /skills 验证加载） |
+| Trae CN | `~/.trae-cn/skills/` |
 
-> 各工具对 skill 的加载方式可能略有差异，同步后请在该工具内确认技能可被识别。
+> 各工具对 skill 的加载方式可能略有差异，同步后请在该工具内确认技能可被识别（CodeBuddy 用 /skills 查看；Trae CN 重启后生效）。
 
 ## 使用速查（触发即用）
 
