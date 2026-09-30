@@ -19,7 +19,7 @@
 | CI 存在？ | 无 → 至少先建：lint + 类型 + 单测三件套（P0） |
 | 架构执法？ | 无 import-linter/ArchUnit/依赖规则 → 按 contract-toolbox 补（P1） |
 | 越界检测？ | 无 → 装 assets/boundary-check.sh（P1） |
-| 测试存在性检查？ | 改行为代码不带测试能合入？（P1） |
+| 测试对应性检查？ | 改行为代码是否必须给出 AC↔测试对应（新增或引用既有+覆盖说明）？（P1） |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 
 ### C. 文档层（L3）
@@ -49,7 +49,7 @@
 |---|---|---|
 | P0 | 建根级 AGENTS.md（六区块，R 编号） | AGENTS.md |
 | P0 | CLAUDE.md 收敛为单行指针 | CLAUDE.md = 1 行 |
-| P1 | CI 补越界检测 + 测试存在性 | ci.yml 修订 |
+| P1 | CI 补越界检测 + 测试对应性检查 | ci.yml 修订 |
 | P1 | 高风险模块补模块级 AGENTS.md | modules/payment/AGENTS.md |
 | P2 | import-linter 契约 ×3 | pyproject 增补 |
 ```

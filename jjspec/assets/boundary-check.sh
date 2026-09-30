@@ -22,16 +22,15 @@ grep -vE '^[[:space:]]*(#|$)' "${BOUNDARY}" > "${PATTERNS}" || true
 
 # 2. 获取 diff 文件清单——获取失败必须显式失败，禁止静默放行（fail-closed）
 #    --no-renames      ：重命名拆成"删旧路径+增新路径"，两侧都参与边界判定（防改名搬运越界内容）
-#    core.quotepath=off：中文等非 ASCII 路径原样输出，不做八进制转义（防误判越界）
-if ! git -c core.quotepath=off diff --name-only --no-renames "${BASE}"...HEAD > "${DIFF_FILES}" 2>/dev/null; then
+#    -z + read -d ''   ：NUL 分隔读取，含引号/反斜杠/制表符的路径不做任何转义（防误判越界）
+if ! git -c core.quotepath=off diff --name-only --no-renames -z "${BASE}"...HEAD > "${DIFF_FILES}" 2>/dev/null; then
   echo "❌ 越界检测未能执行：git diff 失败（基准 ${BASE} 是否存在？仓库是否干净？）——检查失败按不通过处理"
   exit 1
 fi
 
-# 3. 逐文件对照边界 glob
+# 3. 逐文件对照边界 glob（NUL 分隔：文件名中的引号/反斜杠/换行以外特殊字符均原样保留）
 violations=0
-while IFS= read -r file; do
-  [ -n "${file}" ] || continue
+while IFS= read -r -d '' file || [ -n "${file}" ]; do
   allowed=0
   while IFS= read -r pattern; do
     case "${file}" in

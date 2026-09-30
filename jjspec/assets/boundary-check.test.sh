@@ -50,12 +50,23 @@ expect "重命名搬运越界拦截" 1 "HEAD~1"
 echo z >> src/allowed/中文文件.py && git add -A && git commit -qm "c4"
 expect "中文文件名范围内放行" 0 "HEAD~1"
 
-# 场景6：违规时的报错信息可读（不被变量展开炸掉）
-out="$(bash "${SCRIPT}" "HEAD~1" boundary.txt 2>&1)" || true
-if echo "${out}" | grep -q "unbound variable"; then
-  echo "FAIL: 违规报告输出损坏（unbound variable）"; FAILED=1
+# 场景6：允许范围内含引号/反斜杠的文件名 → 正常通过（NUL 分隔读取修复前被转义误拒）
+echo q >> 'src/allowed/带"引号.py' && echo r >> 'src/allowed/反斜\杠.py' && git add -A && git commit -qm "c5"
+expect "特殊字符文件名范围内放行" 0 "HEAD~1"
+
+# 场景7：确定越界场景的完整报告——断言退出码、违规路径、错误摘要、无脚本自身报错
+#         （b.py 已被场景4移走，用新文件构造越界）
+echo w > src/forbidden/c2.py && git add -A && git commit -qm "c6"
+out="$(bash "${SCRIPT}" "HEAD~1" boundary.txt 2>&1)" && rc=0 || rc=$?
+if [ "${rc}" -eq 1 ] \
+   && echo "${out}" | grep -q "src/forbidden/c2.py" \
+   && echo "${out}" | grep -q "越界检测失败" \
+   && ! echo "${out}" | grep -q "unbound variable"; then
+  echo "PASS: 越界报告完整（退出码/违规路径/摘要/无脚本报错）"
 else
-  echo "PASS: 违规报告输出可读"
+  echo "FAIL: 越界报告不完整（退出码=${rc}）"
+  echo "---- 输出 ----"; echo "${out}"; echo "--------------"
+  FAILED=1
 fi
 
 if [ "${FAILED}" -eq 0 ]; then echo "ALL PASS"; else exit 1; fi

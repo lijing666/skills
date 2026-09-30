@@ -9,9 +9,11 @@ jobs:
         with:
           fetch-depth: 0   # 需要完整历史以 diff 基准分支
       - name: 生成边界文件（从任务卡导出，单一事实源）
+        env:
+          TASK_FILE: tasks/TASK-04.md   # ← 按本 PR 对应的任务卡路径修改；未设置时本步报错退出（fail-closed）
         run: |
           awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' \
-            "${TASK_FILE:?需指定任务卡路径}" > .github/task-boundary.txt
+            "${TASK_FILE:?需在 env.TASK_FILE 指定任务卡路径}" > .github/task-boundary.txt
       - name: 越界改动检测
         run: |
           chmod +x .github/scripts/boundary-check.sh

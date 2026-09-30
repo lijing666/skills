@@ -10,6 +10,7 @@ id: ADR-0021
 title: Token 刷新不使用后台任务
 status: proposed | accepted | superseded(→ADR-00xx)
 date: YYYY-MM-DD
+source: <来源：哪次方案评审/哪个 Spec/HLD>
 ---
 
 ## 背景
