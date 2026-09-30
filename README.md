@@ -3,6 +3,9 @@
 本仓库是所有自定义 Skill 的**唯一编辑源（source of truth）**。
 在本地改完并提交后，再分发同步到各 AI 工具的技能目录。
 
+> 开源发布：jjspec 已发布公开仓库 https://github.com/lijing666/jjspec（MIT）。
+> 发布方式：复制 `jjspec/` 到独立仓库根 + 面向使用者的 README + LICENSE；本地改动后如需更新开源版，重新同步到该仓库。
+
 ## 目录结构
 
 ```
