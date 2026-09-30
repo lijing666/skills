@@ -1,37 +1,52 @@
 #!/usr/bin/env bash
-# boundary-check.sh — 越界改动检测门禁
+# boundary-check.sh — 越界改动检测门禁（fail-closed：检查不了 = 不通过）
 # 用途：PR 的 diff 文件清单对照任务卡声明的边界（boundary 文件，一行一个 glob），超出即失败。
 # 用法：boundary-check.sh <base_ref> <boundary_file>
 #   base_ref      比较基准，如 origin/main
 #   boundary_file 任务卡"边界"区块导出的文件，一行一个 glob（支持 fnmatch，如 modules/payment/*）
-# CI 集成见 ci-snippets/github-actions-boundary.yml
+# CI 集成见 ci-snippets/github-actions-boundary.yml；回归测试见 boundary-check.test.sh
 set -euo pipefail
 
 BASE="${1:?用法: boundary-check.sh <base_ref> <boundary_file>}"
 BOUNDARY="${2:?用法: boundary-check.sh <base_ref> <boundary_file>}"
 
-[ -f "$BOUNDARY" ] || { echo "❌ 边界文件不存在: $BOUNDARY"; exit 1; }
-# 忽略空行与注释
-grep -vE '^\s*(#|$)' "$BOUNDARY" > /tmp/boundary_patterns.txt
-[ -s /tmp/boundary_patterns.txt ] || { echo "❌ 边界文件为空（任务卡未声明边界）"; exit 1; }
+[ -f "${BOUNDARY}" ] || { echo "❌ 边界文件不存在: ${BOUNDARY}"; exit 1; }
 
+# 临时文件用 mktemp（防并发 CI 互相干扰），trap 兜底清理
+PATTERNS="$(mktemp)" ; DIFF_FILES="$(mktemp)"
+trap 'rm -f "${PATTERNS}" "${DIFF_FILES}"' EXIT
+
+# 1. 读取边界清单（忽略空行与注释）
+grep -vE '^[[:space:]]*(#|$)' "${BOUNDARY}" > "${PATTERNS}" || true
+[ -s "${PATTERNS}" ] || { echo "❌ 边界文件为空（任务卡未声明边界）"; exit 1; }
+
+# 2. 获取 diff 文件清单——获取失败必须显式失败，禁止静默放行（fail-closed）
+#    --no-renames      ：重命名拆成"删旧路径+增新路径"，两侧都参与边界判定（防改名搬运越界内容）
+#    core.quotepath=off：中文等非 ASCII 路径原样输出，不做八进制转义（防误判越界）
+if ! git -c core.quotepath=off diff --name-only --no-renames "${BASE}"...HEAD > "${DIFF_FILES}" 2>/dev/null; then
+  echo "❌ 越界检测未能执行：git diff 失败（基准 ${BASE} 是否存在？仓库是否干净？）——检查失败按不通过处理"
+  exit 1
+fi
+
+# 3. 逐文件对照边界 glob
 violations=0
 while IFS= read -r file; do
+  [ -n "${file}" ] || continue
   allowed=0
   while IFS= read -r pattern; do
-    case "$file" in
-      $pattern) allowed=1; break ;;
+    case "${file}" in
+      ${pattern}) allowed=1; break ;;
     esac
-  done < /tmp/boundary_patterns.txt
-  if [ "$allowed" -eq 0 ]; then
-    echo "🚫 越界改动: $file"
+  done < "${PATTERNS}"
+  if [ "${allowed}" -eq 0 ]; then
+    echo "🚫 越界改动: ${file}"
     violations=$((violations+1))
   fi
-done < <(git diff --name-only "$BASE"...HEAD)
+done < "${DIFF_FILES}"
 
-if [ "$violations" -gt 0 ]; then
+if [ "${violations}" -gt 0 ]; then
   echo ""
-  echo "❌ 越界检测失败：$violations 个文件超出任务卡边界（声明见 $BOUNDARY）"
+  echo "❌ 越界检测失败：${violations} 个文件超出任务卡边界（声明见 ${BOUNDARY}）"
   echo "   修正方式：撤销越界改动，或将该文件正式加入任务卡边界并说明理由。"
   exit 1
 fi
