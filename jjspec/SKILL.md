@@ -1,6 +1,6 @@
 ---
 name: jjspec
-description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
+description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 agent_created: true
 version: 1.0.0
 created: 2026-09-29
@@ -22,7 +22,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 ### 场景 A：新项目 / 新接手项目 → 先做接入体检
 
 1. 读 `references/onboarding-checklist.md`，对目标项目逐项体检（规则文件 / CI 门禁 / 文档层 / 执法工具 / 测试覆盖）
-2. 按体检结果产出《接入行动清单》，**先补 L2 规则文件（用 assets/AGENTS.md.template）再进入任何编码任务**——高风险区规则先行
+2. 按体检结果产出《接入行动清单》，**先补 L2 规则文件（用 assets/AGENTS.md.template）再进入任何编码任务**——高风险区规则先行（风险区清单 + `[risk-ok]` 门禁约定随模板落地）
 
 ### 场景 B：新需求 → 九步 SOP
 
@@ -34,7 +34,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 | ④ AI 起草方案，人批准 | 查边界 / 查方向 / 查遗漏；产出打回意见 + 隐性约定（当天回流 L2） | hld-template.md 的三查节 |
 | ⑤ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
 | ⑥ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
-| ⑦ 三层门禁 | 机械 → 行为 → AI 特有（越界/幻觉/缺测试），全绿才合入 | gates.md, assets/boundary-check.sh |
+| ⑦ 三层门禁 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入 | gates.md, assets/boundary-check.sh, assets/risk-zone-check.sh |
 | ⑧ 开关 + 灰度 | 功能默认关合入主干；回滚默认=关开关，涉及数据迁移/外部副作用的变更须在 HLD 声明恢复方式（不可逆变更显式标注） | hld-template.md |
 | ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），须带指标、负责人、结束条件 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
 
@@ -44,7 +44,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 
 走精简 SOP：①影响面（含回归测试定位）→ ③修复 Spec（复现 AC + 不引入回归的非目标）→ ⑤任务卡（**按影响面拆卡，可多卡**）→ ⑦门禁（必须带回归测试）→ ⑨回流（根因归层，防再犯）。
 
-- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免
+- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免；风险区改动走 `[risk-ok]` 门禁（人批准正门）
 - **仅产出文档/分析的任务**（写 PRD/Spec/评审）：交付指定产物即结束，不自动进入编码与发布
 
 ## 参考文档索引（按需加载，勿一次性全读）
@@ -68,7 +68,8 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
 - `assets/boundary-check.sh`：越界检测——PR diff 对照任务卡声明的文件边界，超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
-- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查 job
+- `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok]` 标记（人批准留痕），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
+- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查与风险区门禁 job
 - 物料分级：以上为**开箱可用**（CI 片段需按注释配置任务卡路径后可用）；测试对应性检查、DAG 无环校验随项目测试框架自配；人审三焦点为人工项
 
 ## 四条设计铁律（维护本 skill 时不可违反）

@@ -35,6 +35,7 @@
 - **AI 辅助开发时代，新 Node 项目默认 TS**（Node 22.6+ type stripping / 24 直接跑 .ts）
 - 遗留 JS：JSDoc + `checkJs` 渐进改造，不迁后缀也能拿到大半收益
 - 运行时边界（API 入参）仍需 zod 校验——编译期管不了运行期
+- 架构执法：ESLint `no-restricted-imports`（lint 期，零依赖）优先；分层/循环依赖再上 dependency-cruiser（测试期）
 
 ## 例外唯一门模式（带语义例外的禁令怎么执法）
 

@@ -8,7 +8,7 @@
 | 检查项 | 判据 |
 |---|---|
 | 根级 AGENTS.md 存在？ | 无 → 用 assets/AGENTS.md.template 从零建（P0） |
-| 内容质量？ | 六区块齐（身份/技术栈版本锁定/命令速查/R 规则/风险区/出错去哪查）？规则有 R 编号 + 违反后果？行数 100~150 甜区？ |
+| 内容质量？ | 六区块齐（身份/技术栈版本锁定/命令速查/R 规则/风险区/出错去哪查）？风险区清单带 risk-zones-begin/end 机器标记？规则有 R 编号 + 违反后果？行数 100~150 甜区？ |
 | 双源风险？ | AGENTS.md 与 CLAUDE.md/.cursorrules 并存 → 收敛为单一事实源 + 单行指针（P0） |
 | 模块级规则？ | 高风险模块（支付/鉴权）有无模块级 AGENTS.md？框架全局行为（ORM 租户过滤等）在**根级**（作用域定层级，不跟内容主题）？ |
 | 内部框架盲区？ | 依赖内部 jar（训练数据没有 + 源码不在）→ 框架关键行为写进规则常驻；长尾进 L4 知识库 + 根级指针 |
@@ -19,6 +19,7 @@
 | CI 存在？ | 无 → 至少先建：lint + 类型 + 单测三件套（P0） |
 | 架构执法？ | 无 import-linter/ArchUnit/依赖规则 → 按 contract-toolbox 补（P1） |
 | 越界检测？ | 无 → 装 assets/boundary-check.sh（P1） |
+| 风险区门禁？ | 风险区清单非空而无门禁 → 装 assets/risk-zone-check.sh + `[risk-ok]` 约定（P1）——清单非空而门禁缺失 = AI 可擅改风险区 |
 | 测试对应性检查？ | 改行为代码是否必须给出 AC↔测试对应（新增或引用既有+覆盖说明）？（P1） |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 
@@ -50,6 +51,7 @@
 | P0 | 建根级 AGENTS.md（六区块，R 编号） | AGENTS.md |
 | P0 | CLAUDE.md 收敛为单行指针 | CLAUDE.md = 1 行 |
 | P1 | CI 补越界检测 + 测试对应性检查 | ci.yml 修订 |
+| P1 | 风险区门禁进 CI（risk-zone-check.sh + [risk-ok] 约定） | ci.yml 增补 |
 | P1 | 高风险模块补模块级 AGENTS.md | modules/payment/AGENTS.md |
 | P2 | import-linter 契约 ×3 | pyproject 增补 |
 ```

@@ -1,0 +1,14 @@
+# GitHub Actions：风险区门禁 job（追加到现有 ci.yml 的 jobs: 下）
+# 依赖：AGENTS.md 第 5 节风险区清单含 risk-zones-begin/end 标记（单一事实源，禁止另建清单文件）。
+# 机制：触碰风险区的 commit 必须带 [risk-ok] 标记（人批准留痕），无标记即失败（fail-closed）。
+jobs:
+  risk-zone-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要完整历史以遍历基准分支以来的全部 commit
+      - name: 风险区门禁（[risk-ok] 唯一合法门）
+        run: |
+          chmod +x .github/scripts/risk-zone-check.sh
+          .github/scripts/risk-zone-check.sh origin/${{ github.base_ref }} AGENTS.md
