@@ -42,6 +42,13 @@
 |---|---|
 | 知识回流机制 | AI 出错有无归因回流的固定动作与模板？（无 → 装 feedback-loop.md） |
 
+### F. 安全部（AI 协作特有红线）
+| 检查项 | 判据 |
+|---|---|
+| 密钥扫描进 CI？ | 无 gitleaks/trufflehog 之类扫描 → 补（P1）——AI 硬编码密钥、生成"格式像密钥的字符串"人眼难辨，必须机器扫 |
+| 依赖变更审查？ | 依赖清单（package.json / pom.xml / pyproject.toml 等）未设 PR 必审 → 配 CODEOWNERS（P1）——防 Agent 顺手装包（投毒包 / 传染协议 / 带 CVE 版本混在几百行 diff 里） |
+| 数据分级×模型位置矩阵？ | 未定义"哪些数据允许进哪类模型（本地/私有化/公有云）" → 架构师定矩阵写进 AGENTS.md（P1，**人的决策项非 AI 自查项**）——没有矩阵时，每次请求都在隐性做合规决策 |
+
 ## 行动清单模板
 
 ```markdown
@@ -51,6 +58,7 @@
 | P0 | 建根级 AGENTS.md（六区块，R 编号） | AGENTS.md |
 | P0 | CLAUDE.md 收敛为单行指针 | CLAUDE.md = 1 行 |
 | P1 | CI 补越界检测 + 测试对应性检查 | ci.yml 修订 |
+| P1 | CI 补密钥扫描 + 依赖清单必审配置 + 数据分级矩阵 | ci.yml + CODEOWNERS + AGENTS.md |
 | P1 | 风险区门禁进 CI（risk-zone-check.sh + [risk-ok] 约定） | ci.yml 增补 |
 | P1 | 高风险模块补模块级 AGENTS.md | modules/payment/AGENTS.md |
 | P2 | import-linter 契约 ×3 | pyproject 增补 |

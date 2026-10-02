@@ -2,7 +2,7 @@
 name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 agent_created: true
-version: 1.0.0
+version: 1.1.0
 created: 2026-09-29
 source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -47,6 +47,10 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 - **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免；风险区改动走 `[risk-ok]` 门禁（人批准正门）
 - **仅产出文档/分析的任务**（写 PRD/Spec/评审）：交付指定产物即结束，不自动进入编码与发布
 
+> **体系变更评估**：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 evaluation.md 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
+
+> **变更工件落点与归档**（推荐约定，详见 prd-constitution.md 第八节）：进行中的变更放 `changes/<需求ID>/{spec,design,tasks}.md`；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、PRD 边界检查（触碰目标/非目标/角色/成功标准才修订 PRD 并版本留痕）。
+
 ## 参考文档索引（按需加载，勿一次性全读）
 
 | 文件 | 何时加载 |
@@ -63,6 +67,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 | `references/gates.md` | 步骤 ⑥⑦ |
 | `references/onboarding-checklist.md` | 场景 A |
 | `references/feedback-loop.md` | 步骤 ⑨ 及每次 AI 出错后 |
+| `references/evaluation.md` | 模型升级/换宿主/大改规则资产前；月度体系级复盘 |
 
 ## 执法物料包（直接落进目标项目，不是"读"是"用"）
 
