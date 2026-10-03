@@ -1,6 +1,7 @@
 # 任务卡模板 + DAG 拆卡法
 
 > 用途：任务卡 DAG 拆解阶段（Spec 批准后、编码执行前）。**单卡 = 单窗口 = 单 PR；默认单卡单模块**（跨模块原子变更须注明理由，见拆卡规则 1）；单卡变更 100~400 行为宜。
+> 落点：**一张卡一个文件**——`changes/<需求ID>/tasks/TASK-<编号>.md`（编号与卡 id 一致）。禁止多卡并进单文件：边界导出按卡文件定位，混放会让边界门禁合并所有卡的边界。
 
 ## 单卡模板
 
@@ -10,7 +11,7 @@ id: TASK-04
 title: 定金支付流程
 risk: high | medium | low        # 高风险→AL1 逐卡+100%人审；低→AL2 自主循环
 depends_on: [TASK-01, TASK-02]   # DAG 依赖，指向被依赖者
-spec: specs/deposit.md           # 本卡对应哪份 Spec（spec_ac 的归属，防多 Spec 的 AC 编号歧义）
+spec: changes/<需求ID>/spec.md   # 本卡对应哪份 Spec（spec_ac 的归属，防多 Spec 的 AC 编号歧义）
 spec_ac: [AC1, AC4]              # 本卡验收对应上述 Spec 的哪些 AC
 date: YYYY-MM-DD
 ---

@@ -1,6 +1,6 @@
 # GitHub Actions：越界改动检测 job（追加到现有 ci.yml 的 jobs: 下）
 # 依赖：boundary 文件由任务卡"边界"区块生成（单一事实源，禁止手编两份）——
-#   awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' tasks/TASK-04.md > .github/task-boundary.txt
+#   awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' changes/<需求ID>/tasks/TASK-04.md > .github/task-boundary.txt
 jobs:
   boundary-check:
     runs-on: ubuntu-latest
@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0   # 需要完整历史以 diff 基准分支
       - name: 生成边界文件（从任务卡导出，单一事实源）
         env:
-          TASK_FILE: tasks/TASK-04.md   # ← 按本 PR 对应的任务卡路径修改；未设置时本步报错退出（fail-closed）
+          TASK_FILE: changes/<需求ID>/tasks/TASK-04.md   # ← 按本 PR 对应的任务卡路径修改（一卡一文件）；未设置时本步报错退出（fail-closed）
         run: |
           awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' \
             "${TASK_FILE:?需在 env.TASK_FILE 指定任务卡路径}" > .github/task-boundary.txt

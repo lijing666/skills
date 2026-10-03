@@ -2,7 +2,7 @@
 name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 agent_created: true
-version: 1.2.0
+version: 1.3.0
 created: 2026-09-29
 source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -22,7 +22,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 ### 场景 A：新项目 / 新接手项目 → 先做接入体检
 
 1. 读 `references/onboarding-checklist.md`，对目标项目逐项体检（规则文件 / CI 门禁 / 文档层 / 执法工具 / 测试覆盖）
-2. 按体检结果产出《接入行动清单》，**先补 L2 规则文件（用 assets/AGENTS.md.template）再进入任何编码任务**——高风险区规则先行（风险区清单 + `[risk-ok]` 门禁约定随模板落地）
+2. 按体检结果产出《接入行动清单》，**先补 L2 规则文件（用 assets/AGENTS.md.template）再进入任何编码任务**——高风险区规则先行（风险区清单 + `[risk-ok: @批准人]` 门禁约定随模板落地）
 
 ### 场景 B：新需求 → 九步 SOP
 
@@ -44,13 +44,13 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 
 走精简 SOP：①影响面（含回归测试定位）→ ③修复 Spec（复现 AC + 不引入回归的非目标）→ ⑤任务卡（**按影响面拆卡，可多卡**）→ ⑦门禁（必须带回归测试）→ ⑨回流（根因归层，防再犯）。
 
-- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免；风险区改动走 `[risk-ok]` 门禁（人批准正门）
+- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免；风险区改动走 `[risk-ok: @批准人]` 门禁（人批准正门；脚本做同名检查，禁自批靠平台）
 
 ## 贯穿各场景的约定
 
 - **体系变更评估**（不绑定场景）：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 `evaluation.md` 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
-- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{spec,hld,tasks}.md`；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词。
-- **仅产出文档/分析的任务**（改文档/配置/lint 规则/复盘报告等）：交付指定产物即结束，不自动进入编码与发布。
+- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词。
+- **仅产出文档/分析的任务**（改文档/配置/lint 规则/复盘报告等）：交付指定产物即结束，不自动进入编码与发布。**例外**：配置/lint 规则/CI 类改动虽不自动进入发布，仍须按实际影响验证（含资产级回归）——它们直接改变系统行为，不进发布 ≠ 免验证。
 
 ## 参考文档索引（按需加载，勿一次性全读）
 
@@ -74,7 +74,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
 - `assets/boundary-check.sh`：越界检测——PR diff 对照任务卡声明的文件边界，超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
-- `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok]` 标记（人批准留痕），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
+- `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
 - `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查与风险区门禁 job
 - 物料分级：以上为**开箱可用**（CI 片段需按注释配置任务卡路径后可用）；测试对应性检查、DAG 无环校验随项目测试框架自配；人审三焦点为人工项
 

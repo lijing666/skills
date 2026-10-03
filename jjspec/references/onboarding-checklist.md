@@ -19,7 +19,7 @@
 | CI 存在？ | 无 → 至少先建：lint + 类型 + 单测三件套（P0） |
 | 架构执法？ | 无 import-linter/ArchUnit/依赖规则 → 按 contract-toolbox 补（P1） |
 | 越界检测？ | 无 → 装 assets/boundary-check.sh（P1） |
-| 风险区门禁？ | 风险区清单非空而无门禁 → 装 assets/risk-zone-check.sh + `[risk-ok]` 约定（P1）——清单非空而门禁缺失 = AI 可擅改风险区 |
+| 风险区门禁？ | 风险区清单非空而无门禁 → 装 assets/risk-zone-check.sh + `[risk-ok: @<批准人>]` 约定（P1）——清单非空而门禁缺失 = AI 可擅改风险区 |
 | 测试对应性检查？ | 改行为代码是否必须给出 AC↔测试对应（新增或引用既有+覆盖说明）？（P1） |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 
@@ -46,8 +46,44 @@
 | 检查项 | 判据 |
 |---|---|
 | 密钥扫描进 CI？ | 无 gitleaks/trufflehog 之类扫描 → 补（P1）——AI 硬编码密钥、生成"格式像密钥的字符串"人眼难辨，必须机器扫 |
-| 依赖变更审查？ | 依赖清单（package.json / pom.xml / pyproject.toml 等）未设 PR 必审 → 配 CODEOWNERS（P1）——防 Agent 顺手装包（投毒包 / 传染协议 / 带 CVE 版本混在几百行 diff 里） |
+| 人审强制链？ | 见下方《人审强制链四条》——仅配 CODEOWNERS ≠ 强制（P1）：文件只负责"谁审"，"不审不能合"由分支保护/审批规则提供 |
 | 数据分级×模型位置矩阵？ | 未定义"哪些数据允许进哪类模型（本地/私有化/公有云）" → 架构师定矩阵写进 AGENTS.md（P1，**人的决策项非 AI 自查项**）——没有矩阵时，每次请求都在隐性做合规决策 |
+
+### 《人审强制链四条》（平台无关，接入时逐条落实并验证）
+
+人审是稀缺资源：全仓必审 = 人审通胀 = 橡皮图章。人审只加在**少数关键位置**，且必须真的拦得住。三条清单由人划定（决策项），不是 AI 自查项：
+
+| 必审范围（三类，缺一即漏） | 内容 |
+|---|---|
+| ① 风险区代码路径 | AGENTS.md 第 5 节风险区清单的 glob——**与清单同源同步，禁止另编一份（双源必漂移）** |
+| ② 门禁资产自身 | AGENTS.md、门禁脚本、CI 工作流、CODEOWNERS 本身——改它们等于改门禁（清单可被自我缩小的攻击面） |
+| ③ 依赖与锁文件 | package.json / pom.xml / pyproject.toml **及锁文件**（锁文件才是实际生效版本）——防 Agent 顺手装包 |
+
+| 四条要求 | 判据 |
+|---|---|
+| ① 谁审已指定 | 三类路径已进 CODEOWNERS（或平台等价物），owner 是真正的领域负责人，不是全员/别名凑数 |
+| ② 不审不能合 | 目标分支已开"Code Owner 审批必需"的分支保护/审批规则；**且作者自批已禁止**（平台默认允许自批时必须显式关闭——否则 Agent 自提自批即通关） |
+| ③ 接入即验证 | 用**无批准的测试 PR**触碰风险区路径，确认平台真的拦截——配了没生效 = 没配 |
+| ④ 平台无强制能力时的兜底（**诚实口径：脚本不是防线**） | 平台不能强制审批（如 GitLab Free：CODEOWNERS 仅作建议评审人、不阻止合入）→ 三层兜底，**做不到哪层就在 AGENTS.md 显式记录该缺口**：① **目标分支禁直推**（强制走 MR/PR，至少留下评审痕迹——唯一不依赖平台套餐的手段）；② 启用 CI 门禁脚本 risk-zone-check.sh——它检查**标记格式、非占位符及不同名**，**不能证明批准属实或禁止平台账号自批**（名字可伪造，账号可能有别名）；③ 在 AGENTS.md 第 5 节写明缺口声明（见下表） |
+
+**缺口声明模板**（平台无强制能力时必须写进 AGENTS.md，否则后来者会误以为门禁=已批准）：
+
+```markdown
+> ⚠️ 本项目托管平台无法强制 Code Owner 审批（原因：<如 GitLab Free / 未购买企业版>）。
+> `[risk-ok: @某人]` 标记**不证明**批准属实——脚本只核验标记格式、非占位符及与作者不同名，不等同平台账号身份校验。
+> 风险区改动合入前，审者必须人工核验批准事实（找标记上的人确认，或查 MR 评审记录）。
+```
+
+### 附：CODEOWNERS 平台对照表（**不下发统一模板文件——语法不通**）
+
+| 平台 | 文件位置（查找顺序） | 语法 | "不审不能合"的开关 | 强制能力可用性 |
+|---|---|---|---|---|
+| GitHub | `.github/`、根目录、`docs/` | .gitignore 风格 glob | 分支保护 / Ruleset 勾 "Require review from Code Owners" | ✅ |
+| GitLab | 根目录 → `docs/` → `.gitlab/`（只认第一个） | .gitignore 风格 glob | 受保护分支 + "Require approval from code owners" | ❌ **Premium 起**；Free 仅为建议评审人 |
+| Gitea | `./` → `docs/` → `.gitea/` | **Go 正则**（支持 `!` 取反） | 分支保护勾 "Require review from code owners" | ✅ 但**默认允许作者自批自 PR**，须把 required approvals ≥2 或启用 BlockAdminMergeOverride |
+| Gitee（企业版） | 根目录 / `.gitee/` / `docs/` | 支持正则 | 保护分支 + 评审人设置 | 企业版功能 |
+
+> 迁移提醒：GitHub/GitLab 的 glob 写法搬到 Gitea/码云会被当正则解析，匹配结果完全不同——按目标平台语法重写，不要复制。
 
 ## 行动清单模板
 
@@ -58,8 +94,10 @@
 | P0 | 建根级 AGENTS.md（六区块，R 编号） | AGENTS.md |
 | P0 | CLAUDE.md 收敛为单行指针 | CLAUDE.md = 1 行 |
 | P1 | CI 补越界检测 + 测试对应性检查 | ci.yml 修订 |
-| P1 | CI 补密钥扫描 + 依赖清单必审配置 + 数据分级矩阵 | ci.yml + CODEOWNERS + AGENTS.md |
-| P1 | 风险区门禁进 CI（risk-zone-check.sh + [risk-ok] 约定） | ci.yml 增补 |
+| P1 | CI 补密钥扫描 + 数据分级矩阵 | ci.yml + AGENTS.md |
+| P1 | 人审强制链：三类必审路径进 CODEOWNERS + 开分支保护（禁直推 + 禁自批）+ 测试 PR 验证拦截 | CODEOWNERS + 分支保护配置 |
+| P1 | 平台无强制能力时：AGENTS.md 写缺口声明（标记不证明批准） | AGENTS.md 第 5 节 |
+| P1 | 风险区门禁进 CI（risk-zone-check.sh + [risk-ok: @批准人] 约定） | ci.yml 增补 |
 | P1 | 高风险模块补模块级 AGENTS.md | modules/payment/AGENTS.md |
 | P2 | import-linter 契约 ×3 | pyproject 增补 |
 ```

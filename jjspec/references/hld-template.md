@@ -10,7 +10,7 @@ title: <功能名> 技术方案
 type: hld
 status: draft | approved | superseded(→ADR-00xx)
 date: YYYY-MM-DD
-spec: <Spec 链接>
+spec: changes/<需求ID>/spec.md
 ---
 
 ## 1. 设计概览
