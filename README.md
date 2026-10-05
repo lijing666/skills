@@ -11,7 +11,8 @@
 ```
 skills/
 ├── jjspec/          # AI 架构师工作流 skill（需求 Spec / 架构 / 任务卡 / 九步 SOP）
-└── sync.sh          # 一键同步脚本
+├── jjpr/            # GitHub App 身份推送/建 PR skill（bash + PowerShell 双实现）
+└── sync.sh          # 技能同步脚本
 ```
 
 每个 skill 一个顶层目录，目录内包含 `SKILL.md`（入口）+ `references/` + `assets/` 等。
@@ -20,15 +21,23 @@ skills/
 
 1. **编辑**：只在本仓库内修改技能文件。
 2. **提交**：`git add -A && git commit -m "..."`（每次改动留痕，可回滚）。
-3. **分发**：`./sync.sh` 将所有技能同步到目标技能目录（默认 `~/.workbuddy/skills/`）。
+3. **分发**：`./sync.sh` 同步技能到目标技能目录。默认只同步 jjspec（多数使用者只需要它），
+   技能名作为参数可指定，`all` 为全部。
 
 ```bash
-# 同步到 WorkBuddy（默认）
+# 只同步 jjspec（默认）
 ./sync.sh
 
-# 同步到指定目录（CodeBuddy / Trae 等）
-./sync.sh ~/.codebuddy/skills
-./sync.sh ~/.trae/skills
+# 同步全部技能（jjspec + jjpr，技能维护者用）
+./sync.sh all
+
+# 只同步指定技能
+./sync.sh jjpr
+./sync.sh jjspec jjpr
+
+# 指定目标目录（默认 ~/.workbuddy/skills/，可换 CodeBuddy / Trae 等）
+./sync.sh all --to ~/.codebuddy/skills
+./sync.sh all --to ~/.trae-cn/skills
 ```
 
 ## 各工具技能目录速查（已在本机验证）
