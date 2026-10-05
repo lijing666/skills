@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+# jjpr —— 以 GitHub App（jj-ai-agent）安装身份执行 git 推送与 GitHub 操作的统一入口，
+# 也是唯一对外入口（scripts/ 下其余脚本均为内部实现，不直接调用）。
+#
+# 对外只有一个动作：
+#   jjpr [gh pr create 参数]   推送当前分支并以 App 身份创建 PR（如 --title/--body-file）
+#
+# 内部编排命令（AI 按 references/workflow.md 使用，不对外）：
+#   jjpr doctor            预检：依赖工具、配置、私钥、令牌生成、仓库与 gh 访问
+#   jjpr gh <gh参数>       以 App 身份执行 gh（自动注入 GH_TOKEN）
+#   jjpr push [git参数]    以 App 身份推送当前分支（CI 修复后重推）
+#
+# 配置来源（优先级从高到低）：环境变量 > ~/.git-app/jjpr.env（JJPR_ENV_FILE 可改指）。
+# 令牌缓存于 ~/.cache/jjpr（0600），55 分钟内复用，避免频繁请求 GitHub。
+# 依赖：bash + openssl（JWT 签名）+ curl（API 请求）+ git + gh，macOS 均自带，无 python 依赖。
+set -euo pipefail
+
+JJPR_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+JJPR_ENV_FILE="${JJPR_ENV_FILE:-$HOME/.git-app/jjpr.env}"
+JJPR_CACHE_DIR="${JJPR_CACHE_DIR:-$HOME/.cache/jjpr}"
+JJPR_CACHE_TTL=3300  # 令牌缓存 55 分钟（官方有效期 1 小时，留安全余量）
+# API 基址可用 JJPR_API_BASE 覆盖（测试注入 / GHES 适配；与 jjpr.ps1 对齐）
+API_BASE="${JJPR_API_BASE:-https://api.github.com}"
+
+# ---------- 基础工具 ----------
+
+# 输出错误信息并以失败码退出
+die() { printf 'jjpr: %s\n' "$*" >&2; exit 1; }
+
+# 读取配置项：环境变量优先，其次 jjpr.env（KEY=VALUE 行，# 为注释）。
+# 有非空值时输出并返回 0，否则返回 1。
+config_get() {
+  local key="$1" value
+  value="${!key:-}"
+  if [[ -n "$value" ]]; then printf '%s' "$value"; return 0; fi
+  if [[ -f "$JJPR_ENV_FILE" ]]; then
+    value="$(grep -E "^${key}=" "$JJPR_ENV_FILE" | head -1 | cut -d= -f2- || true)"
+    if [[ -n "$value" ]]; then printf '%s' "$value"; return 0; fi
+  fi
+  return 1
+}
+
+# 归一化远端 URL 为 https://github.com/OWNER/REPO.git；非 github.com 远端报错。
+# 支持 git@github.com:o/r.git、ssh://git@github.com/o/r.git、https://github.com/o/r[.git]。
+to_https() {
+  local url="$1"
+  case "$url" in
+    git@github.com:*) url="https://github.com/${url#git@github.com:}" ;;
+    ssh://git@github.com/*) url="https://github.com/${url#ssh://git@github.com/}" ;;
+    https://github.com/*) : ;;
+    *) die "仅支持 github.com 远端，当前 origin 为：$url" ;;
+  esac
+  [[ "$url" == *.git ]] || url="$url.git"
+  printf '%s' "$url"
+}
+
+# 从 origin 远端解析 OWNER/REPO（如 lijing666/skills）；不在仓库或无 origin 时报错
+origin_repo() {
+  local url repo
+  url="$(git remote get-url origin 2>/dev/null)" || die "当前目录不是 git 仓库，或缺少 origin 远端"
+  repo="$(to_https "$url")"
+  repo="${repo#https://github.com/}"
+  repo="${repo%.git}"
+  printf '%s' "$repo"
+}
+
+# ---------- 令牌生成（纯 bash + openssl + curl，无 python 依赖） ----------
+
+# 把 stdin 字节流编码为 base64url（URL 安全字母表、去填充），用于 JWT 头/负载/签名
+b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+
+# 从 stdin 的 JSON 文本中提取首个 "字段":"字符串值" 的值（GitHub API 响应为压缩单行）
+json_str() { grep -o "\"$1\": *\"[^\"]*\"" | head -1 | sed 's/.*"\([^"]*\)"$/\1/'; }
+
+# 从 stdin 的 JSON 文本中提取首个 "字段":数值 的数值
+json_num() { grep -o "\"$1\": *[0-9]\+" | head -1 | grep -o '[0-9]\+$'; }
+
+# 生成 GitHub App 安装访问令牌并输出到 stdout。
+# 流程：读配置 -> 签发 JWT（openssl RS256）-> 发现安装 ID（未显式配置时）-> 换取令牌（curl）。
+# 注意：本函数可能在 if ! 命令替换等条件上下文中被调用，此时函数体内 set -e
+# 失效——所有失败路径一律显式 die（命令替换子 shell 中即 exit 1，消息走 stderr）。
+generate_token() {
+  local app_id key_path installation_id repository
+  local now iat exp header payload signing_input signature jwt
+  local url body_file http_code token
+
+  app_id="$(config_get GITHUB_APP_ID || true)"
+  key_path="$(config_get GITHUB_APP_PRIVATE_KEY_PATH || true)"
+  if [[ -z "$app_id" || -z "$key_path" ]]; then
+    die "缺少配置：GITHUB_APP_ID / GITHUB_APP_PRIVATE_KEY_PATH（环境变量或 ${JJPR_ENV_FILE}）"
+  fi
+  key_path="${key_path/#\~/$HOME}"
+  [[ -f "$key_path" ]] || die "私钥文件不存在：${key_path}"
+
+  # iat 回拨 60 秒容忍时钟偏差；exp 为 +540 秒，时窗恰在 GitHub 的 10 分钟上限内
+  now="$(date +%s)"
+  iat=$((now - 60))
+  exp=$((now + 540))
+  header="$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)"
+  payload="$(printf '{"iat":%s,"exp":%s,"iss":%s}' "$iat" "$exp" "$app_id" | b64url)"
+  signing_input="${header}.${payload}"
+  if ! signature="$(printf '%s' "$signing_input" | openssl dgst -sha256 -sign "$key_path" 2>/dev/null | b64url)" || [[ -z "$signature" ]]; then
+    die "JWT 签名失败（openssl）：私钥不可读或格式无效"
+  fi
+  jwt="${signing_input}.${signature}"
+
+  # 安装 ID：显式配置优先；否则用仓库上下文向 GitHub 发现
+  installation_id="$(config_get GITHUB_APP_INSTALLATION_ID || true)"
+  if [[ -z "$installation_id" ]]; then
+    repository="${GITHUB_REPOSITORY:-}"
+    if [[ -z "$repository" || "$repository" != */* ]]; then
+      die "缺少安装 ID：请配置 GITHUB_APP_INSTALLATION_ID，或在 git 仓库内运行（自动从 origin 解析 OWNER/REPO）"
+    fi
+    body_file="$(mktemp)"
+    http_code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$body_file" -w '%{http_code}' \
+      -H 'Accept: application/vnd.github+json' \
+      -H "Authorization: Bearer ${jwt}" \
+      -H 'X-GitHub-Api-Version: 2026-03-10' \
+      -H 'User-Agent: jjpr-skill' \
+      "${API_BASE}/repos/${repository}/installation")" || { rm -f "$body_file"; die "网络请求失败（curl）——检查网络或代理（连接 10s / 整体 30s 超时即报此错）"; }
+    case "$http_code" in
+      200) installation_id="$(json_num id < "$body_file")" ;;
+      404) rm -f "$body_file"; die "未发现 App 安装（404）：App 尚未安装到 ${repository}，或仓库不存在" ;;
+      401) rm -f "$body_file"; die "JWT 认证失败（401）：私钥与 GITHUB_APP_ID 不匹配，或私钥已被轮换" ;;
+      403) rm -f "$body_file"; die "GitHub 拒绝访问（403）：App 权限或安装范围不足" ;;
+      *)   rm -f "$body_file"; die "发现安装失败：HTTP ${http_code}" ;;
+    esac
+    rm -f "$body_file"
+    [[ -n "$installation_id" ]] || die "发现安装响应异常：未能解析 installation id"
+  fi
+
+  # 用安装 ID 换取 1 小时有效的安装访问令牌
+  body_file="$(mktemp)"
+  http_code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$body_file" -w '%{http_code}' \
+    -X POST -d '{}' \
+    -H 'Accept: application/vnd.github+json' \
+    -H "Authorization: Bearer ${jwt}" \
+    -H 'X-GitHub-Api-Version: 2026-03-10' \
+    -H 'User-Agent: jjpr-skill' \
+    "${API_BASE}/app/installations/${installation_id}/access_tokens")" || { rm -f "$body_file"; die "网络请求失败（curl）——检查网络或代理（连接 10s / 整体 30s 超时即报此错）"; }
+  case "$http_code" in
+    201) token="$(json_str token < "$body_file")" ;;
+    401) rm -f "$body_file"; die "JWT 认证失败（401）：私钥与 GITHUB_APP_ID 不匹配，或私钥已被轮换" ;;
+    403) rm -f "$body_file"; die "GitHub 拒绝访问（403）：App 权限或安装范围不足" ;;
+    404) rm -f "$body_file"; die "安装 ID 不存在（404）：GITHUB_APP_INSTALLATION_ID=${installation_id} 无效" ;;
+    *)   rm -f "$body_file"; die "获取令牌失败：HTTP ${http_code}" ;;
+  esac
+  rm -f "$body_file"
+  [[ -n "$token" ]] || die "令牌响应异常：未能解析 token 字段"
+  printf '%s' "$token"
+}
+
+# ---------- 令牌管理 ----------
+
+# 确保安装上下文可用：无显式安装 ID 时，从 origin 解析仓库并注入 GITHUB_REPOSITORY
+ensure_installation_context() {
+  if [[ -z "${GITHUB_APP_INSTALLATION_ID:-}" ]] && ! config_get GITHUB_APP_INSTALLATION_ID >/dev/null; then
+    if [[ -z "${GITHUB_REPOSITORY:-}" ]]; then
+      export GITHUB_REPOSITORY="$(origin_repo)"
+    fi
+  fi
+}
+
+# 令牌缓存文件路径：按安装 ID（或仓库名）隔离，避免跨安装串用
+token_cache_file() {
+  local key
+  key="$(config_get GITHUB_APP_INSTALLATION_ID || true)"
+  [[ -n "$key" ]] || key="${GITHUB_REPOSITORY:-unknown}"
+  key="${key//\//--}"
+  printf '%s/token-%s' "$JJPR_CACHE_DIR" "$key"
+}
+
+# 读取未过期缓存令牌：命中则输出令牌并返回 0，否则返回 1
+read_cached_token() {
+  local cache="$1" expiry tok now
+  [[ -f "$cache" ]] || return 1
+  now="$(date +%s)"
+  {
+    IFS= read -r expiry
+    IFS= read -r tok
+  } < "$cache"
+  [[ -n "${tok:-}" ]] || return 1
+  (( now < expiry )) || return 1
+  printf '%s' "$tok"
+}
+
+# 写入令牌缓存：目录 700，文件 600，首行为过期时间戳
+write_token_cache() {
+  local cache="$1" tok="$2"
+  mkdir -p -m 700 "$JJPR_CACHE_DIR"
+  ( umask 077; printf '%s\n%s\n' "$(( $(date +%s) + JJPR_CACHE_TTL ))" "$tok" > "$cache" )
+}
+
+# 获取安装令牌：优先读缓存（55 分钟内），过期或无缓存则生成。
+# 注意：显式检查失败与空值——本函数可能被 || / if 等条件上下文调用，
+# 函数体内的 set -e 在该场景下会失效，不能依赖 errexit 传播失败。
+get_token() {
+  ensure_installation_context
+  local cache tok
+  cache="$(token_cache_file)"
+  if tok="$(read_cached_token "$cache")"; then printf '%s' "$tok"; return 0; fi
+  if ! tok="$(generate_token)"; then
+    return 1
+  fi
+  [[ -n "$tok" ]] || return 1
+  write_token_cache "$cache" "$tok"
+  printf '%s' "$tok"
+}
+
+# ---------- 子命令 ----------
+
+# 以 App 身份执行 gh 原生命令：令牌仅注入子进程环境，不留在当前 shell
+cmd_gh() {
+  [[ $# -ge 1 ]] || die "用法：jjpr gh <gh参数>（如 jjpr gh pr view 12）"
+  local tok
+  tok="$(get_token)" || die "安装令牌获取失败（可先跑 jjpr doctor 定位）"
+  GH_TOKEN="$tok" exec gh "$@"
+}
+
+# 以 App 身份推送当前分支：清空继承的凭据助手（钥匙串等），注入 jjpr 专用助手，
+# 显式指定 HTTPS 推送地址——即使 origin 是 SSH 形式也不改配置、不走个人凭据。
+cmd_push() {
+  local url branch tok
+  url="$(git remote get-url origin 2>/dev/null)" || die "当前目录不是 git 仓库，或缺少 origin 远端"
+  url="$(to_https "$url")"
+  branch="$(git branch --show-current)"
+  [[ -n "$branch" ]] || die "当前处于 detached HEAD，无法推送"
+  tok="$(get_token)" || die "安装令牌获取失败（可先跑 jjpr doctor 定位）"
+  export JJPR_TOKEN="$tok"
+  git -c credential.helper= \
+      -c credential.helper="$JJPR_HOME/scripts/jjpr-credential.sh" \
+      push "$@" "$url" "HEAD:refs/heads/$branch"
+}
+
+# 推送当前分支后以 App 身份创建 PR：参数透传给 gh pr create。
+# 防呆：拒绝在默认分支上直接工作。
+cmd_pr() {
+  local cur
+  cur="$(git branch --show-current 2>/dev/null)" || die "当前目录不是 git 仓库"
+  case "$cur" in
+    main|master) die "不要直接在默认分支（${cur}）上工作，请切到特性分支" ;;
+    "") die "当前处于 detached HEAD，无法创建 PR" ;;
+  esac
+  cmd_push
+  local tok
+  tok="$(get_token)" || die "安装令牌获取失败（可先跑 jjpr doctor 定位）"
+  GH_TOKEN="$tok" exec gh pr create "$@"
+}
+
+# 预检：依赖 -> 配置 -> 私钥 -> 仓库上下文 -> 令牌 -> gh 访问，逐项检查，
+# 第一处失败即停（fail-fast）并给出修复指引。
+cmd_doctor() {
+  printf 'jjpr 预检\n'
+
+  command -v curl >/dev/null 2>&1 || die "curl 不可用（GitHub API 请求依赖）"
+  printf '  [✅] curl 可用\n'
+
+  command -v openssl >/dev/null 2>&1 || die "openssl 不可用（JWT 签名依赖）"
+  printf '  [✅] openssl 可用\n'
+
+  command -v gh >/dev/null 2>&1 || die "gh 不可用（GitHub CLI 操作依赖）"
+  printf '  [✅] gh %s\n' "$(gh --version | head -1 | awk '{print $3}')"
+
+  local app_id key_path key_perm
+  app_id="$(config_get GITHUB_APP_ID || true)"
+  [[ -n "$app_id" ]] || die "未配置 GITHUB_APP_ID（环境变量或 ${JJPR_ENV_FILE}）"
+  printf '  [✅] App ID = %s\n' "$app_id"
+
+  key_path="$(config_get GITHUB_APP_PRIVATE_KEY_PATH || true)"
+  [[ -n "$key_path" ]] || die "未配置 GITHUB_APP_PRIVATE_KEY_PATH（${JJPR_ENV_FILE}）"
+  key_path="${key_path/#\~/$HOME}"
+  [[ -f "$key_path" ]] || die "私钥不存在：$key_path"
+  # 权限探测：GNU stat（Linux/Git Bash/WSL2）优先，BSD stat（macOS）回退。
+  # 顺序不可颠倒——GNU 的 -f 是 --file-system（退出码 0 但输出文件系统信息，非权限值），
+  # 放前面会静默走错分支；BSD 对 -c 直接报错退出，才能正确触发回退。
+  key_perm="$(stat -c '%a' "$key_path" 2>/dev/null || stat -f '%Lp' "$key_path" 2>/dev/null || printf '')"
+  if [[ "$key_perm" != "600" ]]; then
+    printf '  [⚠️] 私钥权限非 600，建议：chmod 600 %s\n' "$key_path"
+  fi
+  printf '  [✅] 私钥就绪：%s\n' "$key_path"
+
+  if git rev-parse --git-dir >/dev/null 2>&1 && git remote get-url origin >/dev/null 2>&1; then
+    export GITHUB_REPOSITORY="$(origin_repo)"
+    printf '  [✅] origin 仓库：%s\n' "$GITHUB_REPOSITORY"
+  else
+    printf '  [⚠️] 当前不在 git 仓库（或无 origin）——跳过仓库相关检查\n'
+  fi
+
+  local tok
+  tok="$(get_token)" || die "安装令牌生成失败（检查私钥/App ID/安装状态）"
+  printf '  [✅] 安装令牌生成成功（缓存于 %s）\n' "$JJPR_CACHE_DIR"
+
+  if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    if GH_TOKEN="$tok" gh repo view "$GITHUB_REPOSITORY" --json nameWithOwner >/dev/null 2>&1; then
+      printf '  [✅] gh 以 App 身份访问 %s 成功\n' "$GITHUB_REPOSITORY"
+    else
+      die "gh 访问 $GITHUB_REPOSITORY 失败：App 可能未安装到该仓库（404）或权限不足（403）"
+    fi
+  fi
+
+  printf '预检通过：可执行 jjpr push / jjpr pr。\n'
+}
+
+# ---------- 入口 ----------
+
+# 输出用法说明
+usage() {
+  cat <<'EOF'
+用法：jjpr [gh pr create 参数]   推送当前分支并以 App 身份创建 PR
+示例：jjpr --title "标题" --body-file pr.md
+
+内部命令（AI 编排与排障用，见 references/workflow.md）：
+  doctor            预检配置与身份链路
+  gh <gh参数>       以 App 身份执行 gh
+  push [git参数]    以 App 身份推送当前分支
+EOF
+}
+
+# 命令分发：- 开头的参数走默认动作（推送 + 建 PR）；
+# doctor/gh/push 为内部编排命令；其余视为误用。
+main() {
+  [[ $# -ge 1 ]] || { usage >&2; exit 2; }
+  case "$1" in
+    doctor) shift; cmd_doctor "$@" ;;
+    gh)     shift; cmd_gh "$@" ;;
+    push)   shift; cmd_push "$@" ;;
+    -h|--help|help) usage ;;
+    -*)     cmd_pr "$@" ;;
+    *)      usage >&2; exit 2 ;;
+  esac
+}
+
+# 直接执行时进入主流程；被 source 时（测试场景）仅暴露函数
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
