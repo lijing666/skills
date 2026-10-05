@@ -2,7 +2,7 @@
 name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 agent_created: true
-version: 1.3.0
+version: 1.3.1
 created: 2026-09-29
 source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -82,7 +82,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 
 1. **SKILL.md 永不超 150 行**——细节一律下沉 references，防止 2000 行文档病（注意力稀释）
 2. **规则必配物料**——纯文字规则是文档期最软契约；能机器执法的给配置、给脚本
-3. **机制归 skill，内容归项目**——回流教训写进项目的 AGENTS.md/ADR/知识库；skill 自身升级由人控节奏（第二条循环）
+3. **机制归 skill，内容归项目**——回流教训散写进项目的代码/AGENTS.md/ADR；L4 跨项目教训由人决定去向（项目内零回流文件，禁止机制/台账文档，见 references/feedback-loop.md 硬边界）；skill 自身升级由人控节奏（第二条循环）
 4. **references 必须自包含**——编号（步骤 ⑨）、场景代号（场景 A）离开 SKILL.md 就无上下文；references 内一律用阶段名/内容名自描述，跨文件代号只允许出现在 SKILL.md
 
 ## 输出纪律
