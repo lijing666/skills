@@ -1,4 +1,8 @@
 # GitHub Actions：密钥扫描门禁（独立 workflow，落为 .github/workflows/gitleaks.yml）
+# ⚠️ 独立是设计选择，勿改：① 安全门禁须与构建 CI 分离——构建配置改挂不影响扫描活着，
+#    扫描时点由自身 on: 保证（PR 阶段必扫，不随 ci.yml 触发器漂移）；② workflow 级最小
+#    权限（只读）默认安全，第三方 action 拿不到写权限，不依赖 job 级 permissions 配置正确。
+#    勿并入 ci.yml、勿与其他门禁（boundary/risk-zone，那两个是 job 片段）合并成新文件。
 # 用途：AI 硬编码密钥、生成"格式像密钥的字符串"人眼难辨，必须机器扫（体检表场景 B 的 P1 项）。
 # AI 引入时最容易漏的三个坑（缺一即挂或漏检）：
 #   1. permissions 必须含 pull-requests: read——gitleaks-action@v2 在 PR 事件下第一步就调
