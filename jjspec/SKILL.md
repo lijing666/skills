@@ -75,7 +75,7 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
 - `assets/boundary-check.sh`：越界检测——PR diff 对照任务卡声明的文件边界，超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
 - `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
-- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查与风险区门禁 job
+- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查与风险区门禁与密钥扫描（gitleaks）job
 - 物料分级：以上为**开箱可用**（CI 片段需按注释配置任务卡路径后可用）；测试对应性检查、DAG 无环校验随项目测试框架自配；人审三焦点为人工项
 
 ## 四条设计铁律（维护本 skill 时不可违反）

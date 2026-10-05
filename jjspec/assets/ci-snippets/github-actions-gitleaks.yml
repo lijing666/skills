@@ -1,0 +1,28 @@
+# GitHub Actions：密钥扫描门禁（独立 workflow，落为 .github/workflows/gitleaks.yml）
+# 用途：AI 硬编码密钥、生成"格式像密钥的字符串"人眼难辨，必须机器扫（体检表场景 B 的 P1 项）。
+# AI 引入时最容易漏的三个坑（缺一即挂或漏检）：
+#   1. permissions 必须含 pull-requests: read——gitleaks-action@v2 在 PR 事件下第一步就调
+#      "列 PR commits" API，缺此权限 403 "Resource not accessible by integration"
+#      （注意：GITLEAKS_ENABLE_* 开关关不掉这一步，事件类型决定路径）
+#   2. fetch-depth: 0——默认浅克隆只扫最近 1 个 commit，历史泄漏全部漏检
+#   3. 两个 ENABLE 关闭后无需任何写权限（不发 PR 评论、不上传 SARIF），保持只读门禁
+name: gitleaks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read          # 拉代码扫描
+  pull-requests: read     # 列 PR commits——action PR 模式的最低要求，缺了必 403
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 全历史扫描
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"       # 不发 PR 评论——连写权限申请都省掉
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"  # 不上传 SARIF——上传需写权限
