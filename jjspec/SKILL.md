@@ -1,15 +1,15 @@
 ---
 name: jjspec
-description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→Spec→方案三查→任务卡 DAG→分级执行→三层门禁→开关灰度→回流）；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/新需求开工/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
+description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 agent_created: true
-version: 1.3.1
+version: 1.4.0
 created: 2026-09-29
 source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
 
 # jjspec · AI 架构师工作流
 
-把软件工程知识从人脑搬进 AI 的一等公民上下文：AI 按本 skill 产出文档与代码，人类架构师只保留**方案批准三查**和**人审三焦点**。
+把软件工程知识从人脑搬进 AI 的一等公民上下文：AI 按本 skill 产出文档与代码，人类架构师只保留 **PRD 定稿权**、**方案批准三查**和**人审三焦点**。
 
 ## 核心理念（一切决策的依据）
 
@@ -24,32 +24,50 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 1. 读 `references/onboarding-checklist.md`，对目标项目逐项体检（规则文件 / CI 门禁 / 文档层 / 执法工具 / 测试覆盖）
 2. 按体检结果产出《接入行动清单》，**先补 L2 规则文件（用 assets/AGENTS.md.template）再进入任何编码任务**——高风险区规则先行（风险区清单 + `[risk-ok: @批准人]` 门禁约定随模板落地）
 
-### 场景 B：新需求 → 九步 SOP
+### 场景 B：新需求 → 指令即阶段，九步 SOP
+
+PRD 是所有需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，后面步步错）。**指令决定起止阶段**：
+
+| 用户指令 | AI 行为 |
+|---|---|
+| 写需求 X / 打磨需求 X / 只写 prd X | 跑 ①②③：产出 `changes/<需求ID>/prd.md`（status: draft→评审中），待澄清问题集中在附 D 抛出，**停在定稿前**——定稿只能由用户指令触发 |
+| 定稿 X / PRD 定稿（仅用户可发） | PRD status 置"已定稿" + 版本表登记，停在开工前；用户同句要求"定稿并开工"则直接进入下行 |
+| 按 PRD 开工 X / 开发 X | 读 `changes/<需求ID>/prd.md` 校验 status=已定稿（草稿/评审中一律拒绝开工，fail-closed）→ 按触线清单判定模式 → 直通连跑 ④-⑨ 或走门停在 ⑤ |
+| 直接开工 X | 快速通道：轻量 PRD 一轮确认（复述需求 + 假设 + 澄清打包一单，用户一句确认即定稿）→ 直通连跑 ④-⑨（触线仍走门） |
+| 只写 spec X / 只写 task X | 范围截断词：从定稿 PRD 产出到截断点（Spec=④ / 任务卡=⑥，缺前置产物先补最小前置）即停，不自动进入后续步骤 |
+
+**九步 SOP**（④-⑨ 为执行段，受模式门约束）：
 
 | 步骤 | 动作 | 加载的参考 |
 |---|---|---|
 | ① 架构预检 | 影响面扫描 + 上下文供给检查（高风险区规则/ADR 是否齐） | onboarding 已有则跳过 |
 | ② 规则先行 | 高风险区先补 AGENTS.md 规则与 ADR | assets/AGENTS.md.template, adr-template |
-| ③ 写 Spec | 需求 ≥3 张任务卡 → 先写 PRD（宪法约束）再逐卡拆 Spec；小需求直接 Spec。验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md, prd-* |
-| ④ AI 起草方案，人批准 | 查边界 / 查方向 / 查遗漏；产出打回意见 + 隐性约定（当天回流 L2） | hld-template.md 的三查节 |
-| ⑤ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
-| ⑥ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
-| ⑦ 三层门禁 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入 | gates.md, assets/boundary-check.sh, assets/risk-zone-check.sh |
-| ⑧ 开关 + 灰度 | 功能默认关合入主干；回滚默认=关开关，涉及数据迁移/外部副作用的变更须在 HLD 声明恢复方式（不可逆变更显式标注） | hld-template.md |
+| ③ PRD 打磨环 + 模式判定 | 需求与用户往复打磨（EARS 句式、非目标、失败场景），落 `changes/<需求ID>/prd.md`；按触线清单判定直通/走门 | prd-constitution.md, prd-template.md |
+| ④ 拆 Spec | 由定稿 PRD 逐卡拆 Spec：验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md |
+| ⑤ 方案起草 + 停靠门 | AI 起草 HLD；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
+| ⑥ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
+| ⑦ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
+| ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/boundary-check.sh, assets/risk-zone-check.sh, hld-template.md |
 | ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），须带指标、负责人、结束条件 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
 
-> **低风险小需求精简路径**（单卡内可完成、不碰风险区）：③Spec 与④方案合一为单文档（三查并入卡评审），⑤自然单卡无 DAG，⑧灰度按需。免 PRD 不等于免流程——AC、非目标、边界约束、门禁、回流一样不少。
+**模式判定（触线清单，命中任一 → 走门，全不命中 → 直通）**：风险区（AGENTS.md 第 5 节清单）· 跨模块接口变更 · 全局运行时行为（AOP/拦截器/全局配置）· schema 迁移/不可逆变更 · 金额/幂等/并发 · 预计 ≥3 张任务卡——与三层门禁分层抽审的 100% 人审维度对齐（gates.md）。
+
+- **直通模式**：④-⑨ 连跑不停。Spec/HLD 落盘随 PR 交付（status 留 draft）；PRD 未覆盖的假设逐条以 `[假设]` 标注进 Spec；PR 合入前人工抽审对照 PRD；判错按 ⑨ 回流归因。
+- **走门模式**：停在 ⑤ 方案三查——AI 禁自评三查、禁改文档 status（approved 只能随用户批准置位），批准词只能来自用户消息；批准后方可进入 ⑥。
+- **状态即续接**：跨会话续接靠 `changes/<需求ID>/prd.md` 的 status + 附 D 待澄清清单，不靠会话记忆。
+
+> **低风险小需求精简路径**（单卡内可完成、不触线）：走"直接开工"快速通道，轻量 PRD 一轮确认即定稿；④Spec 与⑤方案合一为单文档（三查并入卡评审，仅直通模式可用），⑥自然单卡无 DAG，⑧灰度按需。免打磨不等于免流程——AC、非目标、边界约束、门禁、回流一样不少。
 
 ### 场景 C：缺陷修复任务
 
-走精简 SOP：①影响面（含回归测试定位）→ ③修复 Spec（复现 AC + 不引入回归的非目标）→ ⑤任务卡（**按影响面拆卡，可多卡**）→ ⑦门禁（必须带回归测试）→ ⑨回流（根因归层，防再犯）。
+走精简 SOP：①影响面（含回归测试定位）→ ④修复 Spec（复现 AC + 不引入回归的非目标）→ ⑥任务卡（**按影响面拆卡，可多卡**）→ ⑧门禁（必须带回归测试）→ ⑨回流（根因归层，防再犯）。
 
-- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ④方案三查，⑧灰度不豁免；风险区改动走 `[risk-ok: @批准人]` 门禁（人批准正门；脚本做同名检查，禁自批靠平台）
+- **高风险缺陷**（鉴权/数据修复/资金/跨模块）不走精简：补②规则先行 + ⑤方案三查（走门停靠），⑧灰度不豁免；风险区改动走 `[risk-ok: @批准人]` 门禁（人批准正门；脚本做同名检查，禁自批靠平台）
 
 ## 贯穿各场景的约定
 
 - **体系变更评估**（不绑定场景）：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 `evaluation.md` 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
-- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词。
+- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词。
 - **仅产出文档/分析的任务**（改文档/配置/lint 规则/复盘报告等）：交付指定产物即结束，不自动进入编码与发布。**例外**：配置/lint 规则/CI 类改动虽不自动进入发布，仍须按实际影响验证（含资产级回归）——它们直接改变系统行为，不进发布 ≠ 免验证。
 
 ## 参考文档索引（按需加载，勿一次性全读）
@@ -57,15 +75,15 @@ source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订�
 | 文件 | 何时加载 |
 |---|---|
 | `references/principles-v1.md` | 设计决策拿不准时；用户问"为什么这么要求"时 |
-| `references/spec-template.md` | 步骤 ③ |
+| `references/spec-template.md` | 步骤 ④ |
 | `references/prd-constitution.md` | 写 PRD / 需求文档 / 需求变更前必读 |
-| `references/prd-template.md` | 大需求（≥3 张任务卡）立项写 PRD 时 |
-| `references/hld-template.md` | 步骤 ④ |
-| `references/taskcard-template.md` | 步骤 ⑤ |
-| `references/adr-template.md` | 步骤 ②④⑨ 需要记录决策时 |
+| `references/prd-template.md` | 步骤 ③ 落 `changes/<需求ID>/prd.md` 时 |
+| `references/hld-template.md` | 步骤 ⑤ |
+| `references/taskcard-template.md` | 步骤 ⑥ |
+| `references/adr-template.md` | 步骤 ②⑤⑨ 需要记录决策时 |
 | `references/antipatterns.md` | 体检、评审、拆卡时对照打勾 |
 | `references/contract-toolbox.md` | 步骤 ② 选执法工具、写架构约束时 |
-| `references/gates.md` | 步骤 ⑥⑦ |
+| `references/gates.md` | 步骤 ⑦⑧ |
 | `references/onboarding-checklist.md` | 场景 A |
 | `references/feedback-loop.md` | 步骤 ⑨ 及每次 AI 出错后 |
 | `references/evaluation.md` | 模型升级/换宿主/大改规则资产前；月度体系级复盘 |

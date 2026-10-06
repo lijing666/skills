@@ -48,6 +48,6 @@ source_requirement: <原始需求链接/记录>
 7. **失败/无解场景必须显式写成 AC**——禁止只写 happy path；每条失败路径都要有 GIVEN/WHEN/THEN
 8. **待澄清统一标注 `[NEEDS CLARIFICATION: <缺什么>]`**——禁止留白或自行编造
 9. **交叉引用一律用 ID**（REQ-xxx / AC-n / ADR-xxxx）——禁止"如前所述""同上"
-10. Spec 人写定（AI 可辅助起草），批准后才进入方案起草（HLD）
+10. Spec 不单独停靠——直通模式随 PR 交付由人工抽审对照；走门模式与 HLD 一并在方案三查处交审
 
-> 大需求（预计 ≥3 张任务卡）先写 PRD（见 `prd-constitution.md` / `prd-template.md`），再由 REQ 逐卡拆 Spec；小需求直接写本模板。
+> 需求一律先经 PRD 定稿（大需求走完整打磨环，小需求走"直接开工"轻量 PRD 一轮确认），再由 REQ 逐卡拆 Spec；PRD 未覆盖的假设逐条以 `[假设]` 标注进 Spec。
