@@ -1,10 +1,11 @@
 ---
 name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
-agent_created: true
-version: 1.4.0
-created: 2026-09-29
-source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
+metadata:
+  agent_created: true
+  version: 1.5.2
+  created: "2026-09-29"
+  source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
 
 # jjspec · AI 架构师工作流
@@ -44,7 +45,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | ② 规则先行 | 文档限定任务只记录缺口；获开工授权且需求明确后、编码前，补齐适用 AGENTS.md 规则与 ADR（风险区改动仍遵守批准要求） | assets/AGENTS.md.template, adr-template |
 | ③ PRD 打磨环 + 模式判定 | 需求与用户往复打磨（EARS 句式、非目标、失败场景），落 `changes/<需求ID>/prd.md`；按触线清单判定直通/走门 | prd-constitution.md, prd-template.md |
 | ④ 拆 Spec | 由定稿 PRD 逐卡拆 Spec：验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md |
-| ⑤ 方案起草 + 停靠门 | AI 起草 HLD；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
+| ⑤ 方案起草 + 停靠门 | AI 起草 HLD；端架构知识协助按 hld-template.md 用途块的"端架构协助路由"执行（该块是唯一正源，不在此复述）；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
 | ⑥ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
 | ⑦ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
 | ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/boundary-check.sh, assets/risk-zone-check.sh, hld-template.md |
