@@ -11,6 +11,7 @@
 ```
 skills/
 ├── jjspec/          # AI 架构师工作流 skill（需求 Spec / 架构 / 任务卡 / 九步 SOP）
+├── jjfullstack/     # 多端全栈架构规则库（规则库非流程包：选型程序 / 复用分层 / 契约 BFF / 端能力 Adapter / HLD 注入）
 ├── jjpr/            # GitHub App 身份推送/建 PR skill（bash + PowerShell 双实现）
 └── sync.sh          # 技能同步脚本
 ```
@@ -28,7 +29,7 @@ skills/
 # 只同步 jjspec（默认）
 ./sync.sh
 
-# 同步全部技能（jjspec + jjpr，技能维护者用）
+# 同步全部技能（jjspec + jjfullstack + jjpr，技能维护者用）
 ./sync.sh all
 
 # 只同步指定技能
@@ -63,6 +64,10 @@ skills/
 | 大需求立项（PRD 层） | 「用 jjspec 写 PRD / 需求文档：<产品名>」（≥3 张任务卡的需求先 PRD 再拆 Spec） |
 | 存量项目改造 | 「用 jjspec 改造 /path/to/项目」（走体检起步，渐进治理） |
 | 体系变更评估 | 「换模型/换 AI 工具了，先跑金丝雀任务集验证体系」（换模型/换宿主/大改规则前必做） |
+| 多端架构设计 | 「用 jjfullstack 设计 /path/to/项目 的多端架构」（触达小程序/移动端或多端选型时，产出 HLD 章节） |
+| 项目架构体检 | 「用 jjfullstack 给 /path/to/项目 做架构体检」（逐规则五态比对，产出 AGENTS.md 规则补丁） |
+| 跨端技术选型 | 「用 jjfullstack 选型：uni-app x / Taro / Flutter / RN / KMP 怎么选」（四步选型程序，可产出 TDR） |
+| 契约单源 / BFF / Design Token | 「用 jjfullstack 处理这个需求的契约单源 / BFF / Design Token」（触单源资产时注入对应规则） |
 
 人工介入点只有三处：**方案批准三查、任务卡粒度调整、风险区人审**。
 
