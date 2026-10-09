@@ -48,7 +48,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | ⑤ 方案起草 + 停靠门 | AI 起草 HLD；端架构知识协助按 hld-template.md 用途块的"端架构协助路由"执行（该块是唯一正源，不在此复述）；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
 | ⑥ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
 | ⑦ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
-| ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/boundary-check.sh, assets/risk-zone-check.sh, hld-template.md |
+| ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/extract-boundary.sh, assets/boundary-check.sh, assets/risk-zone-check.sh, hld-template.md |
 | ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），须带指标、负责人、结束条件 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
 
 **模式判定（触线清单，命中任一 → 走门，全不命中 → 直通）**：风险区（AGENTS.md 第 5 节清单）· 跨模块接口变更 · 全局运行时行为（AOP/拦截器/全局配置）· schema 迁移/不可逆变更 · 金额/幂等/并发 · 预计 ≥3 张任务卡——与三层门禁分层抽审的 100% 人审维度对齐（gates.md）。
@@ -93,10 +93,11 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 ## 执法物料包（直接落进目标项目，不是"读"是"用"）
 
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
-- `assets/boundary-check.sh`：越界检测——PR diff 对照任务卡声明的文件边界，超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
+- `assets/extract-boundary.sh`：边界提取层——自动扫描进行中任务卡（```boundary 围栏 + `## 边界` 列表双格式），白名单 = 在场卡（本次 diff 新建/修改的卡）边界并集 + 豁免段；内置 fail-closed 裁决（非豁免文件缺卡覆盖/在场卡未声明边界即失败）。CI 零手改，免手工指定任务卡路径
+- `assets/boundary-check.sh`：越界检测——diff 对照边界文件（由 extract-boundary.sh 生成），超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
 - `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
-- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查与风险区门禁与密钥扫描（gitleaks）job
-- 物料分级：以上为**开箱可用**（CI 片段需按注释配置任务卡路径后可用）；测试对应性检查、DAG 无环校验随项目测试框架自配；人审三焦点为人工项
+- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查（extract-boundary + boundary-check，支持 PR 与 push 双基准——覆盖不可禁直推的场景）与风险区门禁与密钥扫描（gitleaks）job
+- 物料分级：以上为**开箱可用**（boundary job 无需按 PR 手改路径，风险区 job 无需配置）；测试对应性检查、DAG 无环校验随项目测试框架自配；人审三焦点为人工项
 
 ## 四条设计铁律（维护本 skill 时不可违反）
 

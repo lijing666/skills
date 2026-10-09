@@ -1,25 +1,40 @@
 # GitHub Actions：越界改动检测 job（追加到现有 ci.yml 的 jobs: 下）
-# 依赖：boundary 文件由任务卡"边界"区块生成（单一事实源，禁止手编两份）——
-#   awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' changes/<需求ID>/tasks/TASK-04.md > .github/task-boundary.txt
+# 依赖：
+#   1. assets/extract-boundary.sh + assets/boundary-check.sh 落于仓库 .github/scripts/
+#   2. 任务卡（changes/<需求ID>/tasks/TASK-*.md）以 ```boundary 围栏或 ## 边界 列表声明边界
+#      （两格式均支持；归档件 changes/**/archive/ 不算进行中变更）
+# 裁决口径（extract-boundary.sh 内置，fail-closed）：
+#   - 在场卡 = 本次 diff 中新建/修改的进行中任务卡——白名单 = 在场卡边界并集 + 豁免段，
+#     不在场卡的边界一律不进白名单（防"借别的卡的边界夹带越界改动"）
+#   - diff 触碰非豁免文件（README.md/AGENTS.md/docs/*//changes/* 之外）但无在场卡覆盖 → 失败
+#   - 有在场卡但未声明边界 → 失败
+#   - diff 全豁免（只动文档/变更工件）→ 白名单仅含豁免段，boundary-check 自然放行
+#   - 输出恒非空（含豁免段）→ CI 无需判空跳过，直接交 boundary-check 比对
 jobs:
   boundary-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # 需要完整历史以 diff 基准分支
-      - name: 生成边界文件（从任务卡导出，单一事实源）
+          fetch-depth: 0   # 需要 diff 基准分支（PR 为 base 分支，push 为前一提交）
+      - name: 越界改动检测（PR 用基准分支，push 用前一提交——覆盖不可禁直推的场景）
         env:
-          TASK_FILE: changes/<需求ID>/tasks/TASK-04.md   # ← 按本 PR 对应的任务卡路径修改（一卡一文件）；未设置时本步报错退出（fail-closed）
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: |
-          awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' \
-            "${TASK_FILE:?需在 env.TASK_FILE 指定任务卡路径}" > .github/task-boundary.txt
-      - name: 越界改动检测
-        run: |
-          chmod +x .github/scripts/boundary-check.sh
-          .github/scripts/boundary-check.sh origin/${{ github.base_ref }} .github/task-boundary.txt
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            echo "无有效基准（首推/force push），跳过——PR 渠道仍会拦截。"
+            exit 0
+          fi
+          chmod +x .github/scripts/*.sh
+          .github/scripts/extract-boundary.sh "${BASE}" > /tmp/task-boundary.txt
+          .github/scripts/boundary-check.sh "${BASE}" /tmp/task-boundary.txt
 
-# task-boundary.txt 示例（对应 TASK-04 的边界区块，由 awk 生成）：
-#   modules/payment/deposit.py
+# task-boundary.txt 示例（extract-boundary.sh 输出 = 豁免段 + 在场卡边界并集）：
+#   # —— 豁免段（文档/变更工件，不参与越界判定；由 extract-boundary.sh 生成）——
+#   README.md
+#   AGENTS.md
+#   docs/*
+#   changes/*
+#   modules/payment/deposit.py        ← 来自在场卡的 ```boundary 围栏 / ## 边界 列表
 #   modules/payment/__tests__/*
 #   # 注释行与空行被忽略

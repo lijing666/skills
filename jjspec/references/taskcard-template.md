@@ -1,7 +1,7 @@
 # 任务卡模板 + DAG 拆卡法
 
 > 用途：任务卡 DAG 拆解阶段、编码执行前。直通模式以有效定稿 PRD 和 draft Spec/HLD 拆卡；走门模式须当前 Spec/HLD 已获用户批准。仅恢复既有行为的缺陷可免 PRD，以有预期依据的修复 Spec 拆卡，模式按 `prd-constitution.md` 风险复判规则确定。**单卡 = 单窗口 = 单 PR；默认单卡单模块**（跨模块原子变更须注明理由）；单卡变更 100~400 行为宜。
-> 落点：**一张卡一个文件**——`changes/<需求ID>/tasks/TASK-<编号>.md`（编号与卡 id 一致）。禁止多卡并进单文件：边界导出按卡文件定位，混放会让边界门禁合并所有卡的边界。
+> 落点：**一张卡一个文件**——`changes/<需求ID>/tasks/TASK-<编号>.md`（编号与卡 id 一致）。禁止多卡并进单文件：CI 按卡文件路径做在场卡过滤与边界归属，混放会让过滤与越界判定失效。
 
 ## 单卡模板
 
@@ -18,11 +18,18 @@ status: pending | in_progress | blocked | done
 ---
 
 ## 边界（机器可查）
-<!-- 允许触碰的文件/目录清单，一行一个 glob。本区块是唯一事实源；
-     boundary 文件由本区块生成（awk '/^## 边界/{f=1;next} /^## /{f=0} f&&/^- /{sub(/^- /,"");print}' TASK.md > task.boundary），
-     禁止手工另编一份（双清单必漂移） -->
-- modules/payment/deposit.py
-- modules/payment/__tests__/deposit_test.py
+<!-- 允许触碰的文件/目录清单，一行一个 glob。本区块是唯一事实源，禁止手工另编一份（双清单必漂移）。
+     CI 由 extract-boundary.sh 自动扫描全部进行中卡的边界（在场卡过滤 + fail-closed 裁决），
+     无需手改任何 workflow 文件。两种声明格式任选其一，一卡混用亦可（提取结果合并；注释行与空行忽略）：
+     格式①（推荐）```boundary 围栏：
+       ```boundary
+       modules/payment/deposit.py
+       modules/payment/__tests__/deposit_test.py
+       ```
+     格式② ## 边界 区块下的 `- ` 列表（原生格式）：
+     - modules/payment/deposit.py
+     - modules/payment/__tests__/deposit_test.py
+     未声明边界的卡一旦在场（diff 触碰非豁免文件）→ CI fail-closed，故开卡时必须声明 -->
 
 ## 契约
 <!-- 输入输出签名，含错误路径 -->
