@@ -3,7 +3,7 @@ name: jjfullstack
 description: "多端全栈架构规则库（规则库非流程包、非教科书）：为多端产品（Web/H5/微信及多平台小程序/iOS/Android/鸿蒙等端组合）的架构设计与项目接入提供强制规则、选型程序与规则落位映射。三种模式：①架构设计——按命中层加载规则库（全局 R-U + 端规则 R-MP/R-APP/R-HM/R-WEB），把规则落成 HLD（High-Level Design，架构设计文档）章节（分层裁决表/契约与 BFF/能力矩阵与一致性分级/工程化落位）；②项目接入体检——对既有仓库逐规则五态比对（不适用/符合/缺失/违反/待人工），产出 AGENTS.md 规则补丁与优化建议；③选型咨询——四步选型程序（必选端硬过滤/锚定评分/混布裁决/试点 TDR）。当用户要求：多端/跨端架构设计、跨端技术选型（uni-app x/Taro/Flutter/React Native/KMP）、共享业务逻辑/契约单源/BFF 设计、Design Token 设计令牌、鸿蒙接入评估、Web 渲染模式选型、后端数据与高并发设计、项目架构体检/接入检查，或说 jjfullstack 时使用。"
 metadata:
   agent_created: true
-  version: 2.2.1
+  version: 2.2.2
   created: "2026-10-09"
   source: "《全栈架构师九天教程》课程沉淀（用户深度参与修订）"
 ---
