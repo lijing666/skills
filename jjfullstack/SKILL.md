@@ -3,7 +3,7 @@ name: jjfullstack
 description: "多端全栈架构规则库（规则库非流程包、非教科书）：为多端产品（Web/H5/微信及多平台小程序/iOS/Android/鸿蒙等端组合）的架构设计与项目接入提供强制规则、选型程序与规则落位映射。三种模式：①架构设计——按命中层加载规则库（全局 R-U + 端规则 R-MP/R-APP/R-HM/R-WEB），把规则落成 HLD（High-Level Design，架构设计文档）章节（分层裁决表/契约与 BFF/能力矩阵与一致性分级/工程化落位）；②项目接入体检——对既有仓库逐规则五态比对（不适用/符合/缺失/违反/待人工），产出 AGENTS.md 规则补丁与优化建议；③选型咨询——四步选型程序（必选端硬过滤/锚定评分/混布裁决/试点 TDR）。当用户要求：多端/跨端架构设计、跨端技术选型（uni-app x/Taro/Flutter/React Native/KMP）、共享业务逻辑/契约单源/BFF 设计、Design Token 设计令牌、鸿蒙接入评估、Web 渲染模式选型、后端数据与高并发设计、项目架构体检/接入检查，或说 jjfullstack 时使用。"
 metadata:
   agent_created: true
-  version: 2.2.2
+  version: 2.2.3
   created: "2026-10-09"
   source: "《全栈架构师九天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -37,7 +37,7 @@ metadata:
 
 统一口径：**先判适用范围 → 再按命中范围加载与注入**；各层可同时命中，取规则并集并去重，再按每条规则的适用前提裁剪。未触达的端、功能和基础设施不新增要求；未来端仅记录已确认规划，不扩大 PRD 非目标。
 1. 按命中层加载规则：端引擎触发 → `rules/universal.md` + 本次触达的端规则；单源联动 → 读取 universal 中的共享、契约与工程化规则（R-U07 / R-U12~U20 / R-U28~U35 / R-U37~U38）；Web 渲染决策 → `rules/web.md`；后端数据与高并发 → universal 中的 R-U21~U27 / R-U36。仅命中 Web 层时只加载 Web 规则
-2. 有选型决策时加载 `references/selection-program.md`
+2. 涉及技术栈/框架/跨端方案选择时：**必须先读 `references/selection-program.md` 再产出任何选型内容**（禁止凭本文件概述即兴组织选型结论）；产出须附程序执行留痕（所走程序 + 关键判定步骤），无留痕不得标称程序名
 3. 产出按 `references/hld-injection.md` 槽位注入 HLD；落位为 AGENTS.md 的规则，文档阶段只产出拟新增条目，不修改项目规则文件。已有开发授权覆盖时随实施落地，不重复索要授权；否则遵循工作流的文档任务边界
 
 ### 模式 B · 项目接入体检
