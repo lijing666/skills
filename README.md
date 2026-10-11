@@ -12,6 +12,7 @@
 skills/
 ├── jjspec/          # AI 架构师工作流 skill（需求 Spec / 架构 / 任务卡 / 九步 SOP）
 ├── jjfullstack/     # 多端全栈架构规则库（规则库非流程包：选型程序 / 复用分层 / 契约 BFF / 端能力 Adapter / HLD 注入）
+├── jjagent/         # Agent 产线架构规则库（规则库非流程包：确定性优先 / 状态机 / LLM 网关 / 流式 / 评测 / 数据安全 / RAG 工具——Agent 需求 HLD 注入 + Agent 项目接入体检）
 ├── jjpr/            # GitHub App 身份推送/建 PR skill（bash + PowerShell 双实现）
 └── sync.sh          # 技能同步脚本
 ```
@@ -29,7 +30,7 @@ skills/
 # 只同步 jjspec（默认）
 ./sync.sh
 
-# 同步全部技能（jjspec + jjfullstack + jjpr，技能维护者用）
+# 同步全部技能（jjspec + jjfullstack + jjagent + jjpr，技能维护者用）
 ./sync.sh all
 
 # 只同步指定技能
@@ -68,6 +69,8 @@ skills/
 | 项目架构体检 | 「用 jjfullstack 给 /path/to/项目 做架构体检」（逐规则五态比对，产出 AGENTS.md 规则补丁） |
 | 跨端技术选型 | 「用 jjfullstack 选型：uni-app x / Taro / Flutter / RN / KMP 怎么选」（四步选型程序，可产出 TDR） |
 | 契约单源 / BFF / Design Token | 「用 jjfullstack 处理这个需求的契约单源 / BFF / Design Token」（触单源资产时注入对应规则） |
+| Agent 产品架构设计 | 「用 jjagent 设计 /path/to/项目 的 Agent 架构」（Agent/LLM 应用需求起草 HLD 时注入产线规则；用 jjspec 起草方案时经架构知识协助路由自动协作） |
+| Agent 项目接入体检 | 「用 jjagent 给 /path/to/项目 做 Agent 体检」（逐规则五态比对，产出报告与 AGENTS.md 规则补丁） |
 
 人工介入点只有三处：**方案批准三查、任务卡粒度调整、风险区人审**。
 
