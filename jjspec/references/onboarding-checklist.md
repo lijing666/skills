@@ -20,7 +20,7 @@
 | 架构执法？ | 无 import-linter/ArchUnit/依赖规则 → 按 contract-toolbox 补（P1） |
 | 越界检测？ | 无 → 装 assets/boundary-check.sh（P1） |
 | 风险区门禁？ | 风险区清单非空而无门禁 → 装 assets/risk-zone-check.sh + `[risk-ok: @<批准人>]` 约定（P1）——清单非空而门禁缺失 = AI 可擅改风险区 |
-| 测试对应性检查？ | 改行为代码是否必须给出 AC↔测试对应（新增或引用既有+覆盖说明）？（P1） |
+| 测试对应性检查？ | 改行为代码必须给出 AC↔测试对应——装 assets/ac-coverage-check.sh（P1，开箱）：卡声明 ## 测试文件清单 + spec_ac 校验（taskcard-template 定义格式）；断言语义对应仍归人审三焦点 |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 
 ### C. 文档层（L3）
@@ -93,7 +93,7 @@
 |---|---|---|
 | P0 | 建根级 AGENTS.md（六区块，R 编号） | AGENTS.md |
 | P0 | CLAUDE.md 收敛为单行指针 | CLAUDE.md = 1 行 |
-| P1 | CI 补越界检测 + 测试对应性检查 | ci.yml 修订 |
+| P1 | CI 补越界检测（extract-boundary + boundary-check）+ 测试对应性门禁（ac-coverage-check） | ci.yml 修订 + .github/scripts/ |
 | P1 | CI 补密钥扫描 + 数据分级矩阵 | ci.yml + AGENTS.md |
 | P1 | 人审强制链：三类必审路径进 CODEOWNERS + 开分支保护（禁直推 + 禁自批）+ 测试 PR 验证拦截 | CODEOWNERS + 分支保护配置 |
 | P1 | 平台无强制能力时：AGENTS.md 写缺口声明（标记不证明批准） | AGENTS.md 第 5 节 |

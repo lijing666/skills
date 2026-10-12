@@ -1,0 +1,30 @@
+# GitHub Actions：测试对应性门禁 job（追加到现有 ci.yml 的 jobs: 下）
+# 依赖：
+#   1. assets/ac-coverage-check.sh 落于仓库 .github/scripts/
+#   2. 任务卡按 taskcard-template.md 声明 spec: / spec_ac / ## 边界 / ## 测试文件清单
+# 裁决口径（ac-coverage-check.sh 内置，fail-closed）：
+#   - diff 触碰行为文件（非豁免且非测试文件）→ 覆盖它的在场卡必须声明 ## 测试文件清单
+#   - 清单条目格式非法 / 指向不存在的文件 / 条目不是测试文件 → 失败
+#   - 在场卡 spec_ac 引用 Spec 中不存在的 AC → 失败（防幻觉/笔误）
+#   - diff 只触碰豁免/测试文件 → 通过
+#   - 断言语义对应（测试是否真测了 AC）仍归人审三焦点——本 job 只执法存在性契约
+# 测试文件识别：内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell
+#   及 tests|test|__tests__|spec|specs|e2e|androidTest|ohosTest 目录段）；布局非典型时在
+#   run 末尾追加 --test-glob，如：.github/scripts/ac-coverage-check.sh "${BASE}" --test-glob 'qa/checks/*'
+jobs:
+  ac-coverage-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要 diff 基准（PR 为 base 分支，push 为前一提交）
+      - name: 测试对应性检查（PR 用基准分支，push 用前一提交——覆盖不可禁直推的场景）
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            echo "无有效基准（首推/force push），跳过——PR 渠道仍会拦截。"
+            exit 0
+          fi
+          chmod +x .github/scripts/*.sh
+          .github/scripts/ac-coverage-check.sh "${BASE}"
