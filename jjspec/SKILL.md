@@ -46,7 +46,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | ③ PRD 打磨环 + 模式判定 | 需求与用户往复打磨（EARS 句式、非目标、失败场景），落 `changes/<需求ID>/prd.md`；按触线清单判定直通/走门 | prd-constitution.md, prd-template.md |
 | ④ 拆 Spec | 由定稿 PRD 逐卡拆 Spec：验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md |
 | ⑤ 方案起草 + 停靠门 | AI 起草 HLD；架构知识协助按 hld-template.md 用途块的"架构知识协助路由"执行（该块是唯一正源，不在此复述）；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
-| ⑥ 任务卡 DAG | 单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
+| ⑥ 任务卡 DAG | **硬门槛：未读 taskcard-template.md 不得产出任务卡（凭记忆复述格式曾致缺 `## 测试文件清单` 被 ac-coverage-check 拦截，2026-10-12）**；单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验 | taskcard-template.md |
 | ⑦ 分级执行 | 低风险 Agent 自主循环；高风险逐卡 + 100% 人审 | gates.md |
 | ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/extract-boundary.sh, assets/boundary-check.sh, assets/ac-coverage-check.sh, assets/risk-zone-check.sh, hld-template.md |
 | ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），须带指标、负责人、结束条件 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
