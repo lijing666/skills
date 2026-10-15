@@ -11,7 +11,7 @@ type: spec
 status: draft | approved | implemented
 version: v0.1
 date: YYYY-MM-DD
-source_requirement: <PRD 路径及版本；或原规格/契约/用户确认的预期行为依据>
+source_requirement: <PRD 路径及版本，分册需求注明主 prd.md 与涉及模块文件；或原规格/契约/用户确认的预期行为依据>
 ---
 
 ## 1. 背景与目标

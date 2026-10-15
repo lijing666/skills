@@ -1,9 +1,9 @@
 ---
 name: jjspec
-description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
+description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/大需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.7.0
+  version: 1.8.0
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -32,6 +32,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | 用户指令 | AI 行为 |
 |---|---|
 | 写需求 X / 打磨需求 X / 只写 prd X | ①只读预检 → ③产出 `changes/<需求ID>/prd.md`（status: draft→评审中）；②规则缺口只记建议，待澄清问题集中在附 D，**停在定稿前**——定稿只能由用户指令触发 |
+| 多模块需求 X / 分册需求 X / 大需求 X / 拆分需求 X | 按 `references/prd-splitting.md` 以「主 prd.md + prd-<序号>-<模块>.md」分册起稿（新需求）或迁移拆分（存量整稿）；①②③照常但产物为分册，校验按 `references/prd-splitting.md` 由 AI 自行执行全绿后停在定稿前；④起 Spec、⑤HLD、⑥任务卡及后续步骤不变（spec/hld 仍单文件）。仅显式指令触发，不做自动判定 |
 | 定稿 X / PRD 定稿（仅用户可发） | PRD status 置"已定稿" + 版本表登记，停在开工前；用户同句要求"定稿并开工"则直接进入下行 |
 | 按 PRD 开工 X / 开发 X | 校验 `changes/<需求ID>/prd.md` 的定稿对当前版本有效 → 复查①并落实② → 判定模式 → 直通执行④-⑨或走门停在⑤；草稿/评审中不得进入实现 |
 | 直接开工 X | 单卡且不触线：轻量 PRD 一轮确认（复述需求 + 假设 + 澄清打包一单，用户确认即定稿）→ 落实①②后执行④-⑨；触线或超出单卡则补完整 PRD，经用户定稿后按触线清单判定直通/走门 |
@@ -69,7 +70,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 ## 贯穿各场景的约定
 
 - **体系变更评估**（不绑定场景）：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 `evaluation.md` 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
-- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词。
+- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词（带编号实体文件例外见 prd-constitution.md 第八节）。
 - **文档/分析范围优先**：预检只读，规则缺口记入目标产物的建议，不自动修改 AGENTS.md、CI 或新增已接受 ADR；指定产物完成即止。用户明确要求修改规则/配置/lint/CI 时在授权范围内实施并验证，不自动发布。纯文档任务不要求开工授权。
 
 ## 参考文档索引（按需加载，勿一次性全读）
@@ -80,6 +81,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | `references/spec-template.md` | 步骤 ④ |
 | `references/prd-constitution.md` | 写 PRD / 需求文档 / 需求变更前必读 |
 | `references/prd-template.md` | 步骤 ③ 落 `changes/<需求ID>/prd.md` 时 |
+| `references/prd-splitting.md` | 分册需求（多模块需求/大需求）起稿，或存量单文件 PRD 迁移拆分时 |
 | `references/hld-template.md` | 步骤 ⑤ |
 | `references/taskcard-template.md` | 步骤 ⑥ |
 | `references/adr-template.md` | 步骤 ②⑤⑨ 需要记录决策时 |
