@@ -72,6 +72,8 @@ skills/
 | 契约单源 / BFF / Design Token | 「用 jjfullstack 处理这个需求的契约单源 / BFF / Design Token」（触单源资产时注入对应规则） |
 | Agent 产品架构设计 | 「用 jjagent 设计 /path/to/项目 的 Agent 架构」（Agent/LLM 应用需求起草 HLD 时注入产线规则；用 jjspec 起草方案时经架构知识协助路由自动协作） |
 | Agent 项目接入体检 | 「用 jjagent 给 /path/to/项目 做 Agent 体检」（逐规则五态比对，产出报告与 AGENTS.md 规则补丁） |
+| UI 设计规范生成（HTML 原型 / Figma 设计稿） | 「用 jjspec 生成 UI 规范 <产品名>（附 HTML 原型或 Figma 地址）」（机械提取产四件套落 `ui-specs/`，对账清单停在确认前；HTML 路线基准实跑渲染、像素级验收，设计稿路线规格逐项量化断言） |
+| 需求与 UI 规范绑定 | 「用 jjspec 绑定 UI 规范 <产品名>（需求 <需求名> 与 UI 规范 <规范名>）」（AI 识别页面↔REQ 映射逐条带证据，确认后回填 PRD「UI 真源」列，PRD 版本 +1 回评审中） |
 
 人工介入点只有三处：**方案批准三查、任务卡粒度调整、风险区人审**。
 

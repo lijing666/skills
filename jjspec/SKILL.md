@@ -1,6 +1,6 @@
 ---
 name: jjspec
-description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检，或要求按 AI 架构师规范交付时使用。"
+description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
   version: 1.8.1
@@ -37,6 +37,8 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | 按 PRD 开工 X / 开发 X | 校验 `changes/<需求ID>/prd.md` 的定稿对当前版本有效 → 复查①并落实② → 判定模式 → 直通执行④-⑨或走门停在⑤；草稿/评审中不得进入实现 |
 | 直接开工 X | 单卡且不触线：轻量 PRD 一轮确认（复述需求 + 假设 + 澄清打包一单，用户确认即定稿）→ 落实①②后执行④-⑨；触线或超出单卡则补完整 PRD，经用户定稿后按触线清单判定直通/走门 |
 | 只写 spec X / 只写 task X | 新需求从定稿 PRD 产出到截断点（Spec=④ / 任务卡=⑥）；缺 PRD 时先补草稿待用户定稿，缺方案时先起草，走门须获批准才拆卡；仅写目标及必要前置文档，不实施规则建议、不编码 |
+| 生成 UI 规范 X（附 HTML 原型或 Figma 地址） | 加载 `references/ui-spec-guide.md` 生成管线：判定 HTML/设计稿分支 → 机械提取 → 前置产物四件套落 `ui-specs/<产品ID>-<业务大项>/` → 机械校验 → 输出对账清单**停在用户确认前**（确认前 README 状态 draft）；仅文档任务，不编码 |
+| 绑定 UI 规范 X（需求 X 与 UI 规范 Y） | 加载 `references/ui-spec-guide.md` 绑定管线：AI 语义识别页面↔REQ 映射（每条带证据，歧义列《待修正清单》等用户修正）→ 确认后回填 PRD 第 8 章「UI 真源」列与主 PRD 绑定块 → 版本 +1 回评审中（宪法第九节）；不进入 Spec 或编码 |
 
 **九步 SOP**（④-⑨ 为执行段，受模式门约束）：
 
@@ -82,6 +84,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | `references/prd-constitution.md` | 写 PRD / 需求文档 / 需求变更前必读 |
 | `references/prd-template.md` | 步骤 ③ 落 `changes/<需求ID>/prd.md` 时 |
 | `references/prd-splitting.md` | 分册需求（多模块需求/大需求）起稿，或存量单文件 PRD 迁移拆分时 |
+| `references/ui-spec-guide.md` | 「生成 UI 规范」或「绑定 UI 规范」指令触发时；前置规则见 prd-constitution.md 第九节 |
 | `references/hld-template.md` | 步骤 ⑤ |
 | `references/taskcard-template.md` | 步骤 ⑥ |
 | `references/adr-template.md` | 步骤 ②⑤⑨ 需要记录决策时 |

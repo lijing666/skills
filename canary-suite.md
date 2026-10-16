@@ -15,8 +15,8 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 | 触发 | 说明 |
 |---|---|
-| 规则语义修订 | R-U28 / R-U30 / selection-program / R-AG 判定类规则的重写或条件变更 |
-| 触发结构变更 | SKILL.md 模式 A 触发层、命中层判定、HLD 注入契约的调整 |
+| 规则语义修订 | jjfullstack：R-U28 / R-U30 / selection-program；jjagent：R-AG 判定类规则的重写或条件变更 |
+| 触发结构变更 | SKILL.md 触发层调整——jjfullstack/jjagent：模式 A 触发层、命中层判定、HLD 注入契约；jjspec：指令表行、文档模板契约（如 PRD 分册、模板章节） |
 | 宿主/模型升级 | 更换宿主工具或升级底层模型 |
 | 端规则大改 | R-MP / R-APP / R-HM / R-WEB / R-AG 各文件的结构性增删 |
 
@@ -24,8 +24,8 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 ## 2. 执行方式
 
-1. 逐场景以对应技能的**模式 A（架构设计）真实执行**（体检场景走模式 B）——输入 §3 的需求卡，真实产出 HLD（含对应技能标注的注入章节与执行留痕），禁止用推演回放或记忆结论替代
-2. 留痕硬要求：产出须附程序执行留痕（端数判定输入、所走程序名、评分表或判据链）——无留痕 = 标称失准 = 未执行
+1. 逐场景以对应技能的**模式 A（架构设计）真实执行**（体检场景走模式 B）——输入 §3 的需求卡，真实产出 HLD（含对应技能标注的注入章节与执行留痕），禁止用推演回放或记忆结论替代；jjspec 场景的执行方式特例见 §3.3（产出分册 PRD 而非 HLD）
+2. 留痕硬要求：产出须附程序执行留痕（端数判定输入、所走程序名、评分表或判据链；jjspec 场景为三重校验原始对账清单）——无留痕 = 标称失准 = 未执行
 3. 产出后按 §4 对应技能的判定判据逐条比对；全绿才算通过（jjfullstack 7 条 / jjagent 6 条 / jjspec 6 条）
 4. 跑完在 §6 执行记录表登记一行
 
@@ -200,3 +200,4 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 | 2026-10-11 | jjfullstack v2.3.0 | 补跑：R-U28/R-U30/selection-program v2.3.0 修订后的变更必跑（建册抽查不能替代；CANARY-1~5 模式 A 产出 HLD 于 /tmp/canary-jjfullstack-20261011/） | 5/5 通过 | §4.1 七判据全绿；C5 骑手端选型在无团队背景输入下按锚定纪律以假设起评并作敏感性声明（程序内行为，评分表/投降条件留痕齐全）；发现基线表除小程序行外亦无"单端原生 App"行——C4 经团队既有能力层闭环未触基线，暂不构成缺口条目，供 §5 后续评估 |
 | 2026-10-15 | jjspec v1.8.1 | PRD 分册机制放量前必跑：v1.8.0 新增分册 + v1.8.1 触发词收敛（删「大需求」、主次定序）；jjspec 场景集 S1/S2 收编建册（canary-suite v1.2，本行即建册首跑） | 2/2 通过 | §4.3 六判据全绿；S1 计数对账 4=2+2、归属唯一 4/4、三产物 status=draft 停定稿前；S2 R7 三块 diff 逐字符一致、R6 保号、Scenario 3=3、行级覆盖 121 行未命中 12 行全为元信息/骨架行（frontmatter/版本表 v1.0 行/变更续接/关联文档骨架）；留痕 /tmp/canary-jjspec-20261015/（verification.txt + verify.sh）；S2 构造存量（⚠️ 构造） |
 | 2026-10-15 | jjfullstack v2.3.0 / jjagent v1.0.0 | 豁免登记：本次变更仅触及 jjspec（分册机制），两技能规则文件零改动、判定语义无变化（§1 豁免条款） | 豁免 | 不跑场景 |
+| 2026-10-16 | jjfullstack v2.3.0 + jjagent v1.0.0 + jjspec v1.8.1 | UI 真源绑定机制入库（宪法第九节 / ui-spec-guide / prd-template 第 8 章 / spec+taskcard 承接位 / gates 视觉回归）+ 对读单源收敛（视觉组分支指针 9.4→9.9、采集条件/理由段/Token 判据归一）首提交前必跑；全量 12 例重跑（C1~C5 / J1~J5 / S1~S2） | 12/12 通过 | §4.1 七判据 / §4.2 六判据 / §4.3 六判据全绿；jjspec 场景仅覆盖分册路径，UI 管线场景 S3 待建（UI 增量靠人工对读审查放行）；发现 R-AG25 前提与违反信号边界张力（单租户预建 tenant_id 判 ➖，执法点经优化建议保留，待维护澄清）；留痕 /tmp/canary-full-20261016/（jjfullstack 5 HLD、jjagent 4 HLD + J5 体检报告 + 样例仓库、jjspec 分册产物 + verification.txt；J4/J5 为 ⚠️ 构造） |
