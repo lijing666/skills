@@ -13,6 +13,7 @@ risk: high | medium | low        # 高风险→AL1 逐卡+100%人审；低→AL2
 depends_on: [TASK-01, TASK-02]   # DAG 依赖，指向被依赖者
 spec: changes/<需求ID>/spec.md   # 本卡对应哪份 Spec（spec_ac 的归属，防多 Spec 的 AC 编号歧义）
 spec_ac: [AC1, AC4]              # 本卡验收对应上述 Spec 的哪些 AC
+ui_source_page: ui-specs/<产品ID>-<业务大项>/pages/p-<序号>-<短名>.md   # 页面卡必填：本卡还原的页面规格文件（目录名同宪法第九节第 10 条）；非页面卡省略此行
 date: YYYY-MM-DD
 status: pending | in_progress | blocked | done
 ---
@@ -35,6 +36,15 @@ status: pending | in_progress | blocked | done
 <!-- 输入输出签名，含错误路径 -->
 - deposit(order_id: OrderId, amount: Money) -> DepositResult
 - raises OrderAlreadyPaid, InsufficientDeposit
+
+## UI 规格摘录（仅页面卡必填；开工前完成）
+<!-- 从 ui_source_page 页面文件逐条摘录本卡要还原的规格：区块结构/组件树、关键间距与字号、文案、
+     九态映射。这是 AI 实现的直接上下文——页面卡禁止凭通用后台模板直觉实现（实战教训：AI 知道
+     规格文件在哪也会凭直觉写页面，只有把规格摘进卡里才可靠）。与页面文件冲突时以页面文件为准
+     并登记缺口；无原型页面（空页面-新设计）在此先产出设计规格（Token 引用与状态覆盖）再实现。 -->
+- 区块结构：<如：页头（标题+描述）→ 查询区 → 表格区（操作列右固定）>
+- 关键量化：<如：页头下间距 24px、表格行高 48px>
+- 九态映射：<如：loading/empty/error/permission-denied 的呈现方式>
 
 ## 验收
 <!-- 对照 Spec 的 AC，逐条可测 -->
@@ -60,6 +70,7 @@ status: pending | in_progress | blocked | done
 ## 执行进度
 - 下一步/阻塞：<尚未执行时写“待执行”>
 - 验证证据：<实际命令、结果；未验证时明确标注>
+- ui-gate：<页面卡必填：页面消化门槛（ui-pack-check.sh --require-digest）+ 本卡视觉验收（pixel-diff 或结构化断言）结果；未执行时明确标注——缺此行视为卡未完成>
 - 关联提交/PR：<产生后填写>
 ```
 
@@ -72,7 +83,7 @@ status: pending | in_progress | blocked | done
 5. 高风险卡（资金/鉴权/迁移/删除）标注 `risk: high`，禁止 AL2 自主执行
 6. 每张卡自带测试要求——行为变更卡（边界覆盖行为文件）必须在 `## 测试文件清单` 声明看护测试文件，"AC↔测试对应性"门禁（`assets/ac-coverage-check.sh`）强制：清单条目存在且为测试文件、`spec_ac` 不含幻觉引用。断言语义是否真对应 AC 归人审三焦点（防"只断言状态变了"的弱断言）
 7. 仅写任务卡不授予编码权限；开始实现前核验已有开工授权。拆卡或实现中发现新增触线条件，记录在原续接区并转走门；Spec/HLD 修订影响本卡时置 `blocked`，同步后按当前模式核验适用批准，再继续。
-8. **UI 需求的前置卡**：携带 UI 视觉输入的需求，四件套前置卡（设计规范 Token / 图标清单 / 页面布局规格 / 页面-REQ 映射，判据见 `prd-constitution.md` 第九节第 9 条）先于页面卡拓扑序交付，页面卡 `depends_on` 显式指向对应前置卡；前置产物未过机械校验前页面卡不得开工。页面卡实现只读消化规格（`ui-specs/`），不读原始视觉输入。注意与拆卡规则 4 的"单源四件套"（domain/tokens/OpenAPI/Adapter）是两个不同概念，互不替代——UI 消化产物由 UI 规范管线产出，非本次代码开发拆出
+8. **UI 需求的前置卡与页面卡开工门槛**：携带 UI 视觉输入的需求，四件套前置卡（设计规范 Token / 图标清单 / 页面布局规格 / 页面-REQ 映射，判据见 `prd-constitution.md` 第九节第 9 条）先于页面卡拓扑序交付，页面卡 `depends_on` 显式指向对应前置卡；前置产物未过机械校验前页面卡不得开工。页面卡实现只读消化规格（`ui-specs/`），不读原始视觉输入。**页面卡开工三门槛（缺一不得开工，结果登记执行进度 ui-gate）**：① 对应页面规格 frontmatter `digest: quantified`（逐项量化完成；清单级页先补消化，门槛可按页校验：`ui-pack-check.sh <目录> --require-digest p-<序号>`）；② 卡内 `## UI 规格摘录` 完成；③ UI 四件套机械校验通过。**页面视觉验收逐卡内联**：页面卡实现完成即对该页执行视觉验收（HTML 路线 = 冻结原型重跑基准 + pixel-diff ≤ PRD 阈值；设计稿路线 = 结构化断言），超标即打回本卡；D0/CI 为全量复跑与收尾，**不得以 D0 终验替代逐卡内联**（终验发现偏差时返工面已扩大到全部页面）。注意与拆卡规则 4 的"单源四件套"（domain/tokens/OpenAPI/Adapter）是两个不同概念，互不替代——UI 消化产物由 UI 规范管线产出，非本次代码开发拆出
 
 ## 反例（来自实战）
 
