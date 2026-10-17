@@ -3,10 +3,12 @@
 # 执行前提：bash（macOS/Linux 原生；Windows 用 Git Bash 或 WSL 执行同一脚本，零改动）。
 # 跨平台口径：下方「校验」清单是本门禁语义的唯一正源——确无 bash 环境时，可在会话内据此自编
 #   一次性等价校验（不得增删检查项、fail-closed 语义不变、逐项对账输出、禁入库禁提交）。
-# 用法：ui-pack-check.sh <ui-specs/<产品ID>-<业务大项>> [--require-digest [all | p-<两位序号>]]
+# 用法：ui-pack-check.sh <ui-specs/<产品ID>-<业务大项>> [--require-digest [all | p-<两位序号>]] [--require-final]
 #   --require-digest      页面消化门槛（页面卡开工前置，见 taskcard-template 拆卡规则 8）：
 #                         不带值 = 全部页须 digest: quantified；带 p-<序号> = 仅校验指定页
-#   （不带该开关时行为与旧版完全兼容）
+#   --require-final       定稿清零门禁（规范置「可用」与绑定入口前置，宪法第九节第 11 条）：
+#                         「人工补录」按挂起态拦截——assets.md 与 README 不得残留，须消解为 已导出/豁免
+#   （开关可并用；均不带时行为与旧版完全兼容）
 # 校验（任一失败即退出 1 并逐条列明；全部通过输出 UI-PACK PASS）：
 #   1. README.md 存在，且含「## 资产类别登记」节
 #   2. 资产类别登记表 15 类封闭齐全：颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材
@@ -17,14 +19,36 @@
 #   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case（宪法第九节第 10 条）；
 #      每页含 source_anchor 视觉输入锚点
 #   6. （启用 --require-digest 时）指定页面的 frontmatter 含 digest: quantified，
-#      且页面含「## 节点样式量化表」段落（quantified 的强制载体，缺段按清单级拦截）
+#      且页面含「## 节点样式量化表」与「## 布局语义表」两段（quantified 的强制载体，缺段按清单级拦截）
+#   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
+#      icons.json 的 svg 字段指向，文件必须实际存在
+#   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
+#      assets/assets.md 必须有字体文件条目（登记态 已导出/人工补录；--require-final 下人工补录即拦）——
+#      禁止以 token 化登记掩盖文件缺失
+#   9. 定稿清零门禁（--require-final，宪法第九节第 11 条）：assets.md 不得存在「人工补录」挂起条目、
+#      README 不得残留人工补录登记——人工补录是挂起态非终态，置「可用」与绑定入口前须消解
+#      （设计侧提供转「已导出」并附格式与授权，或经用户批准转「豁免」并留替代口径）
 set -uo pipefail
 
-DIR="${1:-}"
+DIR=""
 REQUIRE_DIGEST=""
-if [ "${2:-}" = "--require-digest" ]; then
-  REQUIRE_DIGEST="${3:-all}"
-fi
+REQUIRE_FINAL=""
+_digest_pending=0
+for _arg in "$@"; do
+  if [ "${_digest_pending}" = "1" ]; then
+    _digest_pending=0
+    case "${_arg}" in
+      --*) ;;  # 下一开关：--require-digest 保持默认 all
+      *) REQUIRE_DIGEST="${_arg}"; continue ;;
+    esac
+  fi
+  case "${_arg}" in
+    --require-digest) REQUIRE_DIGEST="${REQUIRE_DIGEST:-all}"; _digest_pending=1 ;;
+    --require-final) REQUIRE_FINAL=1 ;;
+    *) [ -z "${DIR}" ] && DIR="${_arg}" ;;
+  esac
+done
+unset _digest_pending _arg
 FAILS=()
 fail() { FAILS+=("$1"); }
 
@@ -68,14 +92,14 @@ for cat in "${CATEGORIES[@]}"; do
   if [ "${cat}" = "位图素材" ] && [ "${handle}" != "assets" ] && [ "${handle}" != "无" ]; then
     fail "「位图素材」处置仅允许 assets 或 无"
   fi
-  # 处置=assets 的通用检查（位图素材、字体族等媒体资产）：assets.md 存在、清单无未终态条目、目录有资产文件
+  # 处置=assets 的通用检查（位图素材、字体族等媒体资产）：assets.md 存在、清单无未处置条目、目录有资产文件
   if [ "${handle}" = "assets" ]; then
     [ -f "${DIR}/assets/assets.md" ] || fail "「${cat}」处置=assets 但缺 assets/assets.md 素材清单"
     if [ -f "${DIR}/assets/assets.md" ]; then
       bad="$(grep -E '^\|' "${DIR}/assets/assets.md" 2>/dev/null \
         | grep -vE '^\|[[:space:]]*文件[[:space:]]*\||^\|[[:space:]]*-' \
         | awk -F'|' '{v=$(NF-1); gsub(/[[:space:]]/,"",v); if(v!="" && v!="已导出" && v!="豁免" && v!="人工补录") print v}' \
-        | sort -u | tr '\n' ' ')"
+        | sort -u | tr '\n' ' ' || true)"
       [ -z "${bad}" ] || fail "assets.md 存在未终态处置条目: ${bad}（处置仅允许 已导出/豁免/人工补录）"
     fi
     if [ -z "$(find "${DIR}/assets" -type f ! -name 'assets.md' -print -quit 2>/dev/null)" ]; then
@@ -83,6 +107,16 @@ for cat in "${CATEGORIES[@]}"; do
     fi
   fi
 done
+
+# ── 9a) 定稿清零门禁：assets.md 人工补录挂起条目（宪法第九节第 11 条）──
+# 独立于类别登记的处置值检查——字体族等登记 token化 而素材挂在孤立 assets.md 时同样必须清零，防登记口径掩盖挂起
+if [ -n "${REQUIRE_FINAL}" ] && [ -f "${DIR}/assets/assets.md" ]; then
+  pend="$(grep -E '^\|' "${DIR}/assets/assets.md" 2>/dev/null \
+    | grep -vE '^\|[[:space:]]*文件[[:space:]]*\||^\|[[:space:]]*-' \
+    | awk -F'|' '{v=$(NF-1); gsub(/[[:space:]]/,"",v); if(v=="人工补录") print v}' \
+    | sort -u | tr '\n' ' ' || true)"
+  [ -z "${pend}" ] || fail "复刻阻塞清单未清零: ${pend}（宪法第九节第 11 条：人工补录是挂起态非终态——定稿前须消解：设计侧提供转「已导出」并附格式与授权，或经用户批准转「豁免」并留替代口径）"
+fi
 
 # ── 4) 页面规格：编号连续无重号；每页含 source_anchor ──
 shopt -s nullglob
@@ -117,6 +151,8 @@ for p in "${pages[@]}"; do
         fail "${base} 页面消化门槛未过：digest=${digest:-<缺失>}（页面卡开工须 quantified；清单级页先补逐项量化）"
       elif ! grep -q '^## 节点样式量化表' "${p}"; then
         fail "${base} digest=quantified 但缺「## 节点样式量化表」段落（逐节点量化载体，见 ui-spec-guide）——按清单级处理，补量化后再标 quantified"
+      elif ! grep -q '^## 布局语义表' "${p}"; then
+        fail "${base} digest=quantified 但缺「## 布局语义表」段落（布局方向/对齐/auto 行高/字间距/截断，guide「布局语义必须入表」（量化表定义）；纯坐标堆叠不构成 quantified）"
       fi
     fi
   fi
@@ -126,6 +162,61 @@ if [ ${#nums[@]} -gt 0 ]; then
   [ -z "${dups}" ] || fail "页面编号重复: $(printf '%s ' ${dups})"
   gap="$(printf '%s\n' "${nums[@]}" | sort -n | awk 'NR!=$1{print "期望 "NR"，实得 "$1; exit}')"
   [ -z "${gap}" ] || fail "页面编号跳号: ${gap}"
+fi
+
+# ── 7) 引用不出清单：pages/ 引用的 icons/*.svg、assets/*.png 与 icons.json 的 svg 字段必须实际存在 ──
+missing=""
+for ref in $(grep -ohE '(icons|assets)/[A-Za-z0-9._-]+\.(svg|png)' "${DIR}"/pages/*.md 2>/dev/null | sort -u); do
+  [ -f "${DIR}/${ref}" ] || missing="${missing} ${ref}"
+done
+[ -z "${missing}" ] || fail "pages/ 引用素材缺失（引用不出清单）:${missing}"
+if [ -f "${DIR}/icons/icons.json" ]; then
+  m2="$(python3 -c "
+import json, os, sys
+d = json.load(open(sys.argv[1]))
+base = os.path.dirname(sys.argv[1])
+miss = sorted({i.get('svg', '') for i in d.get('icons', []) if i.get('svg') and not os.path.exists(os.path.join(base, i['svg']))})
+print(' '.join(miss))
+" "${DIR}/icons/icons.json" 2>/dev/null)"
+  [ -z "${m2}" ] || fail "icons.json svg 指向文件缺失: ${m2}"
+fi
+
+# ── 8) 字体文件联动：tokens 含非系统字体族名（品牌字体）时，assets/assets.md 必须有字体文件条目 ──
+# 白名单 = 通用族与各平台系统字体；超出白名单视为品牌字体——真机无文件即回退系统字体，须文件落地或人工补录留痕
+# （--require-final 下人工补录挂起即拦，见检查 9 与宪法第九节第 11 条）
+font_bad="$(python3 - "$DIR" <<'PYEOF'
+import re, sys, os, glob
+d = sys.argv[1]
+WL = {'-apple-system','system-ui','sans-serif','serif','monospace','cursive','fantasy',
+      'pingfang sc','pingfang tc','pingfang hk','sf pro','sf pro text','sf pro display',
+      'helvetica','helvetica neue','arial','menlo','roboto','noto sans','noto sans cjk sc',
+      'source han sans','思源黑体','microsoft yahei','微软雅黑','simhei','simsun','miui',
+      'harmonyos sans'}
+fams = set()
+for t in glob.glob(os.path.join(d, 'tokens.*')):
+    try:
+        txt = open(t, encoding='utf-8').read()
+    except OSError:
+        continue
+    fams |= {x.strip().lower() for x in re.findall(r'"([^"]+)"', txt)}
+bad = sorted(f for f in fams if f and f not in WL and not f.startswith('sf pro'))
+if not bad:
+    sys.exit(0)
+am = os.path.join(d, 'assets', 'assets.md')
+have = False
+if os.path.exists(am):
+    for line in open(am, encoding='utf-8'):
+        if re.search(r'\.(ttf|otf|ttc|woff2?)\b', line, re.I) or ('字体' in line and '|' in line):
+            have = True
+if not have:
+    print(' '.join(bad))
+PYEOF
+)"
+[ -z "${font_bad}" ] || fail "tokens 含品牌字体族 [${font_bad}] 但 assets/assets.md 无字体文件条目（guide「字体处置拆分」：取值 token 化 ≠ 文件落地；机械不可得须登记人工补录——--require-final 下挂起即拦，见宪法第九节第 11 条）"
+
+# ── 9b) 定稿清零门禁：README 不得残留人工补录登记（--require-final，宪法第九节第 11 条）──
+if [ -n "${REQUIRE_FINAL}" ] && [ -f "${DIR}/README.md" ] && grep -q '人工补录' "${DIR}/README.md"; then
+  fail "README 仍残留人工补录登记（复刻阻塞清单未清零，宪法第九节第 11 条）——定稿前消解为「已导出」（附格式与授权）或经用户批准转「豁免」并留替代口径；若为豁免叙述中的历史用词请改写后重跑"
 fi
 
 # ── 结果 ──

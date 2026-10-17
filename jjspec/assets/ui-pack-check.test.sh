@@ -3,7 +3,8 @@
 # 在临时目录构造最小合规包，逐一破坏各校验点验证 fail-closed；全部通过输出 ALL PASS，任一失败退出码非 0。
 # 覆盖：合规包放行 / 缺 icons.json / 缺类别行 / 「无」缺理由 / 图标处置非法 /
 #       位图素材=assets 缺 assets.md / 素材清单未处置条目 / 字体族=assets 缺 assets.md /
-#       页面跳号 / 页面缺锚点 / 缺 tokens / 非法 JSON
+#       页面跳号 / 页面缺锚点 / 缺 tokens / 非法 JSON / 引用素材不出清单 /
+#       icons.json svg 指向缺失 / 品牌字体缺字体文件条目 / 品牌字体有字体条目放行
 set -euo pipefail
 
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/ui-pack-check.sh"
@@ -121,7 +122,7 @@ expect "消化门槛：全页无 digest 拦截" 1 "digest" "${WORK}/c12" --requi
 
 # 场景14：p-01 quantified（含量化表段）、p-02 list-level + --require-digest p-01 → 放行（单页门槛）
 mk_pack "${WORK}/c13"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 bg--color-primary |\n' > "${WORK}/c13/pages/p-01-login.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 bg--color-primary |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c13/pages/p-01-login.md"
 expect "消化门槛：单页 quantified 放行" 0 "UI-PACK PASS" "${WORK}/c13" --require-digest p-01
 
 # 场景15：同包 + --require-digest（全量）→ 拦截（p-02 仍 list-level）
@@ -129,8 +130,8 @@ expect "消化门槛：全量模式拦截清单级页" 1 "digest" "${WORK}/c13" 
 
 # 场景16：全部页 quantified（含量化表段）+ --require-digest → 放行
 mk_pack "${WORK}/c14"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n' > "${WORK}/c14/pages/p-01-login.md"
-printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n' > "${WORK}/c14/pages/p-02-list.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c14/pages/p-01-login.md"
+printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c14/pages/p-02-list.md"
 expect "消化门槛：全页 quantified 放行" 0 "UI-PACK PASS" "${WORK}/c14" --require-digest
 
 # 场景17：不带开关时 digest 缺失不影响（向后兼容）
@@ -145,5 +146,69 @@ expect "中文短名拦截" 1 "英文 kebab-case" "${WORK}/c15"
 mk_pack "${WORK}/c16"
 printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n- 主用色：#000000(×19)\n' > "${WORK}/c16/pages/p-01-login.md"
 expect "quantified 缺量化表段拦截" 1 "节点样式量化表" "${WORK}/c16" --require-digest p-01
+
+# 场景20：pages/ 引用不存在的 icons/*.svg → 拦截（宪法第九节第 9 条：引用不出清单）
+mk_pack "${WORK}/c17"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\n---\n# 登录\n图标 icons/missing-icon.svg\n' > "${WORK}/c17/pages/p-01-login.md"
+expect "pages 引用素材缺失拦截" 1 "引用素材缺失" "${WORK}/c17"
+
+# 场景21：icons.json svg 字段指向不存在的文件 → 拦截
+mk_pack "${WORK}/c18"
+printf '{"icons":[{"id":"i1","svg":"ghost.svg"}]}' > "${WORK}/c18/icons/icons.json"
+expect "icons.json svg 指向缺失拦截" 1 "svg 指向文件缺失" "${WORK}/c18"
+
+# 场景22：tokens 含品牌字体（非系统白名单）但 assets.md 无字体文件条目 → 拦截（guide「字体处置拆分」）
+mk_pack "${WORK}/c19"
+printf ':root{--app-font-brand:"Alibaba PuHuiTi 2.0", sans-serif}' > "${WORK}/c19/tokens.css"
+expect "品牌字体缺字体文件条目拦截" 1 "品牌字体族" "${WORK}/c19"
+
+# 场景23：同场景22 但 assets.md 有字体文件条目（人工补录登记态：基础模式放行，定稿门禁下为挂起）→ 放行
+mk_pack "${WORK}/c20"
+printf ':root{--app-font-brand:"Alibaba PuHuiTi 2.0", sans-serif}' > "${WORK}/c20/tokens.css"
+mkdir -p "${WORK}/c20/assets"
+printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途 | 处置 |\n|---|---|---|---|---|\n| — | 字体-AlibabaPuHuiTi | 设计稿字体引用 | 全部品牌标题页 | 人工补录 |\n' > "${WORK}/c20/assets/assets.md"
+expect "品牌字体有字体条目放行" 0 "UI-PACK PASS" "${WORK}/c20"
+
+# 场景24：digest=quantified 有量化表段但缺布局语义表段 → 拦截（guide「布局语义必须入表」（量化表定义））
+mk_pack "${WORK}/c21"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| a |\n|---|\n| b |\n' > "${WORK}/c21/pages/p-01-login.md"
+expect "quantified 缺布局语义表拦截" 1 "布局语义表" "${WORK}/c21" "--require-digest"
+
+# ── 定稿清零门禁（--require-final，宪法第九节第 11 条）──
+
+# 场景25：assets.md 人工补录挂起条目 + --require-final → 拦截（挂起态非终态；复用场景23 的 c20 包）
+expect "定稿门禁：人工补录挂起拦截" 1 "复刻阻塞清单未清零" "${WORK}/c20" --require-final
+
+# 场景26：同 c20 包不带 --require-final → 放行（向后兼容：生成期人工补录登记合法）
+expect "向后兼容：无定稿开关不校验挂起" 0 "UI-PACK PASS" "${WORK}/c20"
+
+# 场景27：README 未决项残留人工补录登记 + --require-final → 拦截
+mk_pack "${WORK}/c22"
+printf '\n## 未决项\n\n- 字体文件：人工补录（设计侧未提供）\n' >> "${WORK}/c22/README.md"
+expect "定稿门禁：README 残留人工补录拦截" 1 "人工补录" "${WORK}/c22" --require-final
+
+# 场景28：字体文件经设计侧提供转已导出 + --require-final → 放行
+mk_pack "${WORK}/c23"
+printf ':root{--app-font-brand:"Alibaba PuHuiTi 2.0", sans-serif}' > "${WORK}/c23/tokens.css"
+mkdir -p "${WORK}/c23/assets"
+printf 'x' > "${WORK}/c23/assets/AlibabaPuHuiTi-2.0.ttf"
+printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途 | 处置 |\n|---|---|---|---|---|\n| AlibabaPuHuiTi-2.0.ttf | 字体-AlibabaPuHuiTi | 设计稿字体引用·商用授权已确认 | 全部品牌标题页 | 已导出 |\n' > "${WORK}/c23/assets/assets.md"
+expect "定稿门禁：字体已导出放行" 0 "UI-PACK PASS" "${WORK}/c23" --require-final
+
+# 场景29：字体经用户批准转豁免（留替代口径）+ --require-final → 放行
+mk_pack "${WORK}/c24"
+printf ':root{--app-font-brand:"Alibaba PuHuiTi 2.0", sans-serif}' > "${WORK}/c24/tokens.css"
+mkdir -p "${WORK}/c24/assets"
+printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途 | 处置 |\n|---|---|---|---|---|\n| — | 字体-AlibabaPuHuiTi | 设计稿字体引用 | 全部品牌标题页 | 豁免 |\n' > "${WORK}/c24/assets/assets.md"
+expect "定稿门禁：字体经批准豁免放行" 0 "UI-PACK PASS" "${WORK}/c24" --require-final
+
+# 场景30：--require-digest --require-final 并用，双门禁各自生效（构造全 quantified + 人工补录挂起包）
+mk_pack "${WORK}/c25"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c25/pages/p-01-login.md"
+printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c25/pages/p-02-list.md"
+mkdir -p "${WORK}/c25/assets"
+printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途 | 处置 |\n|---|---|---|---|---|\n| — | 字体-AlibabaPuHuiTi | 设计稿字体引用 | 全部品牌标题页 | 人工补录 |\n' > "${WORK}/c25/assets/assets.md"
+expect "并用：digest 过但人工补录挂起拦截" 1 "复刻阻塞清单未清零" "${WORK}/c25" --require-digest --require-final
+expect "并用：仅 digest 开关挂起不拦（独立生效）" 0 "UI-PACK PASS" "${WORK}/c25" --require-digest
 
 [ "${FAILED}" -eq 0 ] && echo "ALL PASS" || exit 1
