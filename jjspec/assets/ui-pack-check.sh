@@ -19,7 +19,11 @@
 #   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case（宪法第九节第 10 条）；
 #      每页含 source_anchor 视觉输入锚点
 #   6. （启用 --require-digest 时）指定页面的 frontmatter 含 digest: quantified，
-#      且页面含「## 节点样式量化表」与「## 布局语义表」两段（quantified 的强制载体，缺段按清单级拦截）
+#      且页面含「## 节点样式量化表」与「## 布局语义表」两段（quantified 的强制载体，缺段按清单级拦截）；
+#      并校验 frontmatter entry 字段（多值枚举 menu/internal-tab/internal-entry/drawer/modal/unreachable，
+#      采集判据见 ui-spec-guide 生成管线步 2 导航结构采集，宪法第九节第 12 条——缺失或枚举外值即拦）
+#      与「## 文案清单」段（静态结构文案封闭清单 + 动态数据区选择器，文案覆盖率断言数据源，
+#      见 ui-spec-guide 第三节第 7 条——缺段即拦）
 #   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
 #      icons.json 的 svg 字段指向，文件必须实际存在
 #   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
@@ -28,6 +32,9 @@
 #   9. 定稿清零门禁（--require-final，宪法第九节第 11 条）：assets.md 不得存在「人工补录」挂起条目、
 #      README 不得残留人工补录登记——人工补录是挂起态非终态，置「可用」与绑定入口前须消解
 #      （设计侧提供转「已导出」并附格式与授权，或经用户批准转「豁免」并留替代口径）
+#   10. 定稿清零门禁扩展（--require-final，宪法第九节第 12 条）：页面 frontmatter entry 含
+#       unreachable（渲染态不可达页面 = 结构类复刻阻塞项）即拦——消解 = 用户判定后更新：
+#       死页面剔除页面清单，或设计侧补入口经渲染验证后改真实到达值
 set -uo pipefail
 
 DIR=""
@@ -154,6 +161,15 @@ for p in "${pages[@]}"; do
       elif ! grep -q '^## 布局语义表' "${p}"; then
         fail "${base} digest=quantified 但缺「## 布局语义表」段落（布局方向/对齐/auto 行高/字间距/截断，guide「布局语义必须入表」（量化表定义）；纯坐标堆叠不构成 quantified）"
       fi
+      # ── 6b) entry 到达方式与文案清单段（实现就绪必要条件，随 digest 门槛按页校验；宪法第九节第 12 条）──
+      entry="$(awk 'NR==1&&/^---[[:space:]]*\r?$/{fm=1;next} fm&&/^---[[:space:]]*\r?$/{exit} fm&&/^entry:/{sub(/^entry:[[:space:]]*/,"");gsub(/\r$/,"");print;exit}' "${p}")"
+      if [ -z "${entry}" ]; then
+        fail "${base} 缺 entry 字段（页面到达方式必填，多值枚举见 ui-spec-guide 生成管线步 2 导航结构采集）"
+      else
+        bad_entry="$(printf '%s' "${entry}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -vE '^(menu|internal-tab|internal-entry|drawer|modal|unreachable)$' | grep -v '^$' | tr '\n' ' ' || true)"
+        [ -z "${bad_entry}" ] || fail "${base} entry 枚举非法: ${bad_entry}（允许 menu/internal-tab/internal-entry/drawer/modal/unreachable，多值逗号分隔）"
+      fi
+      grep -q '^## 文案清单' "${p}" || fail "${base} 缺「## 文案清单」段（静态结构文案封闭清单 + 动态数据区选择器，文案覆盖率断言数据源，见 ui-spec-guide 第三节第 7 条）"
     fi
   fi
 done
@@ -217,6 +233,16 @@ PYEOF
 # ── 9b) 定稿清零门禁：README 不得残留人工补录登记（--require-final，宪法第九节第 11 条）──
 if [ -n "${REQUIRE_FINAL}" ] && [ -f "${DIR}/README.md" ] && grep -q '人工补录' "${DIR}/README.md"; then
   fail "README 仍残留人工补录登记（复刻阻塞清单未清零，宪法第九节第 11 条）——定稿前消解为「已导出」（附格式与授权）或经用户批准转「豁免」并留替代口径；若为豁免叙述中的历史用词请改写后重跑"
+fi
+
+# ── 9c) 定稿清零门禁扩展：entry 含 unreachable 的页面 = 结构类复刻阻塞挂起（--require-final，宪法第九节第 12 条）──
+if [ -n "${REQUIRE_FINAL}" ]; then
+  for p in ${pages[@]+"${pages[@]}"}; do
+    entry="$(awk 'NR==1&&/^---[[:space:]]*\r?$/{fm=1;next} fm&&/^---[[:space:]]*\r?$/{exit} fm&&/^entry:/{sub(/^entry:[[:space:]]*/,"");gsub(/\r$/,"");print;exit}' "${p}")"
+    if printf '%s' "${entry}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -qx 'unreachable'; then
+      fail "$(basename "${p}") entry 含 unreachable（渲染态不可达 = 结构类复刻阻塞项，宪法第九节第 12 条）——定稿前消解：用户判定死页面剔除页面清单，或设计侧补入口经渲染验证后改真实到达值"
+    fi
+  done
 fi
 
 # ── 结果 ──

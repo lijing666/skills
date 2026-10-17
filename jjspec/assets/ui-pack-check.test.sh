@@ -122,7 +122,7 @@ expect "消化门槛：全页无 digest 拦截" 1 "digest" "${WORK}/c12" --requi
 
 # 场景14：p-01 quantified（含量化表段）、p-02 list-level + --require-digest p-01 → 放行（单页门槛）
 mk_pack "${WORK}/c13"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 bg--color-primary |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c13/pages/p-01-login.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 bg--color-primary |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n\n动态数据区：.demo-data\n' > "${WORK}/c13/pages/p-01-login.md"
 expect "消化门槛：单页 quantified 放行" 0 "UI-PACK PASS" "${WORK}/c13" --require-digest p-01
 
 # 场景15：同包 + --require-digest（全量）→ 拦截（p-02 仍 list-level）
@@ -130,8 +130,8 @@ expect "消化门槛：全量模式拦截清单级页" 1 "digest" "${WORK}/c13" 
 
 # 场景16：全部页 quantified（含量化表段）+ --require-digest → 放行
 mk_pack "${WORK}/c14"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c14/pages/p-01-login.md"
-printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c14/pages/p-02-list.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c14/pages/p-01-login.md"
+printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\nentry: menu\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 列表 | 标题 |\n' > "${WORK}/c14/pages/p-02-list.md"
 expect "消化门槛：全页 quantified 放行" 0 "UI-PACK PASS" "${WORK}/c14" --require-digest
 
 # 场景17：不带开关时 digest 缺失不影响（向后兼容）
@@ -171,7 +171,7 @@ expect "品牌字体有字体条目放行" 0 "UI-PACK PASS" "${WORK}/c20"
 
 # 场景24：digest=quantified 有量化表段但缺布局语义表段 → 拦截（guide「布局语义必须入表」（量化表定义））
 mk_pack "${WORK}/c21"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| a |\n|---|\n| b |\n' > "${WORK}/c21/pages/p-01-login.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| a |\n|---|\n| b |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c21/pages/p-01-login.md"
 expect "quantified 缺布局语义表拦截" 1 "布局语义表" "${WORK}/c21" "--require-digest"
 
 # ── 定稿清零门禁（--require-final，宪法第九节第 11 条）──
@@ -204,11 +204,47 @@ expect "定稿门禁：字体经批准豁免放行" 0 "UI-PACK PASS" "${WORK}/c2
 
 # 场景30：--require-digest --require-final 并用，双门禁各自生效（构造全 quantified + 人工补录挂起包）
 mk_pack "${WORK}/c25"
-printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c25/pages/p-01-login.md"
-printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c25/pages/p-02-list.md"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c25/pages/p-01-login.md"
+printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\nentry: menu\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 列表 | 标题 |\n' > "${WORK}/c25/pages/p-02-list.md"
 mkdir -p "${WORK}/c25/assets"
 printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途 | 处置 |\n|---|---|---|---|---|\n| — | 字体-AlibabaPuHuiTi | 设计稿字体引用 | 全部品牌标题页 | 人工补录 |\n' > "${WORK}/c25/assets/assets.md"
 expect "并用：digest 过但人工补录挂起拦截" 1 "复刻阻塞清单未清零" "${WORK}/c25" --require-digest --require-final
 expect "并用：仅 digest 开关挂起不拦（独立生效）" 0 "UI-PACK PASS" "${WORK}/c25" --require-digest
+
+# ── entry 到达方式与文案清单（--require-digest 伴随校验，宪法第九节第 12 条）──
+
+# 场景31：--require-digest 下页面缺 entry 字段 → 拦截
+mk_pack "${WORK}/c26"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c26/pages/p-01-login.md"
+expect "entry：缺失拦截" 1 "缺 entry 字段" "${WORK}/c26" --require-digest
+
+# 场景32：entry 枚举外值 → 拦截
+mk_pack "${WORK}/c27"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: sidebar\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c27/pages/p-01-login.md"
+expect "entry：枚举非法拦截" 1 "entry 枚举非法" "${WORK}/c27" --require-digest
+
+# 场景33：entry 多值合法（menu + internal-entry）→ 放行（复用 c14 全合规包改 p-01 为多值）
+mk_pack "${WORK}/c28"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu, internal-entry\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c28/pages/p-01-login.md"
+printf -- '---\ntitle: 列表\nsource_anchor: figma 1:3\ndigest: quantified\nentry: menu\n---\n# 列表\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| list | h88 p12 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 列表 | 标题 |\n' > "${WORK}/c28/pages/p-02-list.md"
+expect "entry：多值合法放行" 0 "UI-PACK PASS" "${WORK}/c28" --require-digest
+
+# 场景34：quantified 齐全但缺「## 文案清单」段 → 拦截
+mk_pack "${WORK}/c29"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n' > "${WORK}/c29/pages/p-01-login.md"
+expect "文案清单：缺段拦截" 1 "文案清单" "${WORK}/c29" --require-digest
+
+# 场景35：向后兼容——不带开关时 entry/文案清单缺失不影响（c26 包无开关放行）
+expect "向后兼容：无开关不校验 entry/文案清单" 0 "UI-PACK PASS" "${WORK}/c26"
+
+# ── unreachable 挂起清零（--require-final 扩展，宪法第九节第 12 条）──
+
+# 场景36：entry 含 unreachable 页面 + --require-final → 拦截（结构类复刻阻塞挂起）
+mk_pack "${WORK}/c30"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: unreachable\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点 | 量化 |\n|---|---|\n| btn | h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c30/pages/p-01-login.md"
+expect "unreachable：定稿门禁拦截" 1 "结构类复刻阻塞" "${WORK}/c30" --require-final
+
+# 场景37：同 c30 包不带开关 → 放行（生成期挂起登记合法）
+expect "向后兼容：无定稿开关不校验 unreachable" 0 "UI-PACK PASS" "${WORK}/c30"
 
 [ "${FAILED}" -eq 0 ] && echo "ALL PASS" || exit 1
