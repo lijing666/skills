@@ -127,13 +127,21 @@ check_one_card() {
     failed=1
   fi
 
-  # ⑤ 页面卡 ui-gate 非待执行
+  # ⑤ 页面卡 ui-gate 内容判据:非待执行 + 必含 pixel-diff/结构化断言字样 + 数字证据 + PASS
+  #    (防验收器漂移:以现成且必过的检查顶替视觉验收,如"目测检查通过/自查通过"——纯文字规定防不住,
+  #     内容判据让漂移写法在脚本层必 FAIL;格式正源 = taskcard-template ui-gate 行)
   local usp ugate
   usp="$(fm "${card}" ui_source_page)"
   if [ -n "${usp}" ]; then
     ugate="$(section "${card}" "执行进度" | grep "^- ui-gate:" | head -1 | sed 's/^- ui-gate:[[:space:]]*//')"
     if [ -z "${ugate}" ] || grep -q "待执行" <<< "${ugate}"; then
       echo "🚫 ${card}:页面卡 status=done 但 ui-gate 未执行(当前:${ugate:-<缺行>})——'待执行 + done'后门组合,拦截" >&2
+      failed=1
+    elif ! grep -qEi "pixel-diff|结构化断言" <<< "${ugate}" \
+       || ! grep -qE "[0-9]+(\.[0-9]+)?%|[0-9]+ */ *[0-9]+" <<< "${ugate}" \
+       || ! grep -qEi "PASS" <<< "${ugate}"; then
+      echo "🚫 ${card}:ui-gate 缺视觉验收证据三要素(pixel-diff/结构化断言字样 + 差异或 n/m 数字 + PASS)——" >&2
+      echo "   当前:「${ugate}」。验收器漂移 = 虚假通过:禁止以摘录对账/测试绿/目测顶替 pixel-diff 或断言,缺能力即停止上报" >&2
       failed=1
     fi
   fi

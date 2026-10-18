@@ -29,7 +29,7 @@ mk_card() {
     echo "ui_source_page: ${4:-}"; echo "status: ${2}"; echo "---"
     echo "## 边界"; echo '- src/**'; echo
     echo "## 验收"; [ -n "$5" ] && printf '%s\n' "$5"; echo
-    echo "## 执行进度"; echo "- 下一步/阻塞:完成"; echo "- ui-gate:${6:-pixel-diff 0.3% 通过}"; } > "$1"
+    echo "## 执行进度"; echo "- 下一步/阻塞:完成"; echo "- ui-gate:${6:-pixel-diff 0.3% ≤ 0.5% PASS}"; } > "$1"
 }
 GOOD='- 定金支付后库存锁定(AC1) → 证据:deposit_test.py 全绿
 - 超时拒付退款(AC4) → 证据:race_test 通过
@@ -46,6 +46,8 @@ D6="changes/r1/tasks/TASK-806.md"; mk_card "${D6}" review high "ui-specs/yzz/pag
 D7="changes/r1/tasks/TASK-807.md"; mk_card "${D7}" in_progress low "" "- 锁定(AC1) → 证据:未跑"                 # 场景7 in_progress 跳过
 D8="changes/r1/tasks/TASK-808.md"; mk_card "${D8}" done low  "" "${GOOD}"                                       # 场景8 非页面卡 done
 D9="changes/r1/tasks/TASK-809.md"; mk_card "${D9}" done low  "" ""                                              # 场景9 验收节为空
+D10="changes/r1/tasks/TASK-810.md"; mk_card "${D10}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "目测检查通过，页面与原型一致"  # 场景10 验收器漂移
+D11="changes/r1/tasks/TASK-811.md"; mk_card "${D11}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景11 断言合规
 git add -A >/dev/null 2>&1; git commit -qm cards
 
 echo "── 单卡模式"
@@ -58,6 +60,8 @@ ck 0 "场景6 review 合法跳过 PASS"    bash "${SH}" "${D6}"
 ck 0 "场景7 in_progress 跳过 PASS"   bash "${SH}" "${D7}"
 ck 0 "场景8 非页面卡 done PASS"      bash "${SH}" "${D8}"
 ck 1 "场景9 验收节为空 FAIL"         bash "${SH}" "${D9}"
+ck 1 "场景10 验收器漂移 FAIL"        bash "${SH}" "${D10}"
+ck 0 "场景11 断言证据合规 PASS"      bash "${SH}" "${D11}"
 
 echo "── 批量模式(--diff)"
 out="$(bash "${SH}" --diff HEAD~1 2>&1)"; rc=$?
