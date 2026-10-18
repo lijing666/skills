@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # task-done-gate.test.sh — task-done-gate.sh 回归测试
 # 覆盖:合规 done PASS / 缺逐条证据 / AC 漏覆盖 / 高风险卡无人审 / ui-gate 待执行后门 /
-#       review 合法跳过 / 非页面卡 / 验收节为空 / 批量模式命中
+#       review 合法跳过 / 非页面卡 / 验收节为空 / 验收器漂移 / 路线感知(谎报拦截+figma合规) / 批量模式命中
 # author: 李晶
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -34,6 +34,14 @@ mk_card() {
 GOOD='- 定金支付后库存锁定(AC1) → 证据:deposit_test.py 全绿
 - 超时拒付退款(AC4) → 证据:race_test 通过
 - 实现整体 100% 人审 → 证据:人审通过 2026-10-18 批准人李晶'
+# mk_page <路径> <source_anchor> — 页面规格 fixture(frontmatter source_anchor + 量化表样例行)
+mk_page() {
+  mkdir -p "$(dirname "$1")"
+  { echo "---"; echo "source_anchor: ${2}"; echo "digest: quantified"; echo "---"
+    echo "## 节点样式量化表"; echo "| 节点 | 值 |"; echo "|---|---|"; echo "| btn | 24px |"; } > "$1"
+}
+mk_page "ui-specs/yzz/pages/p-01.md" "prototype/home.html#p-01"   # HTML 路线页面
+mk_page "ui-specs/yzz/pages/p-02.md" "figma:node 12:34"           # 设计稿路线页面
 D1="changes/r1/tasks/TASK-801.md"; mk_card "${D1}" done high "ui-specs/yzz/pages/p-01.md" "${GOOD}"            # 场景1 合规
 D2="changes/r1/tasks/TASK-802.md"; mk_card "${D2}" done low  "" "- 锁定库存(AC1) → 证据:测试绿
 - 超时拒付(AC4)"                                                                                               # 场景2 第二条缺证据
@@ -47,7 +55,8 @@ D7="changes/r1/tasks/TASK-807.md"; mk_card "${D7}" in_progress low "" "- 锁定(
 D8="changes/r1/tasks/TASK-808.md"; mk_card "${D8}" done low  "" "${GOOD}"                                       # 场景8 非页面卡 done
 D9="changes/r1/tasks/TASK-809.md"; mk_card "${D9}" done low  "" ""                                              # 场景9 验收节为空
 D10="changes/r1/tasks/TASK-810.md"; mk_card "${D10}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "目测检查通过，页面与原型一致"  # 场景10 验收器漂移
-D11="changes/r1/tasks/TASK-811.md"; mk_card "${D11}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景11 断言合规
+D11="changes/r1/tasks/TASK-811.md"; mk_card "${D11}" done low "ui-specs/yzz/pages/p-02.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景11 设计稿路线断言合规
+D12="changes/r1/tasks/TASK-812.md"; mk_card "${D12}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景12 HTML路线谎报断言
 git add -A >/dev/null 2>&1; git commit -qm cards
 
 echo "── 单卡模式"
@@ -62,6 +71,7 @@ ck 0 "场景8 非页面卡 done PASS"      bash "${SH}" "${D8}"
 ck 1 "场景9 验收节为空 FAIL"         bash "${SH}" "${D9}"
 ck 1 "场景10 验收器漂移 FAIL"        bash "${SH}" "${D10}"
 ck 0 "场景11 断言证据合规 PASS"      bash "${SH}" "${D11}"
+ck 1 "场景12 HTML路线谎报断言 FAIL"  bash "${SH}" "${D12}"
 
 echo "── 批量模式(--diff)"
 out="$(bash "${SH}" --diff HEAD~1 2>&1)"; rc=$?

@@ -127,9 +127,11 @@ check_one_card() {
     failed=1
   fi
 
-  # ⑤ 页面卡 ui-gate 内容判据:非待执行 + 必含 pixel-diff/结构化断言字样 + 数字证据 + PASS
-  #    (防验收器漂移:以现成且必过的检查顶替视觉验收,如"目测检查通过/自查通过"——纯文字规定防不住,
-  #     内容判据让漂移写法在脚本层必 FAIL;格式正源 = taskcard-template ui-gate 行)
+  # ⑤ 页面卡 ui-gate 内容判据:非待执行 + 视觉验收证据三要素 + 路线感知字样收紧
+  #    (防两类漂移:①验收器漂移——以现成且必过的检查顶替视觉验收,如"目测检查通过/自查通过";
+  #     ②路线谎报——HTML 路线卡谎报"结构化断言"绕过 pixel-diff 证据。路线由页面规格 source_anchor
+  #     判定(.html→html;含 figma→figma;页面不可读→unknown 宽松双字样兜底),谎报从"人审兜"变机械拦截;
+  #     格式正源 = taskcard-template ui-gate 行)
   local usp ugate
   usp="$(fm "${card}" ui_source_page)"
   if [ -n "${usp}" ]; then
@@ -137,12 +139,36 @@ check_one_card() {
     if [ -z "${ugate}" ] || grep -q "待执行" <<< "${ugate}"; then
       echo "🚫 ${card}:页面卡 status=done 但 ui-gate 未执行(当前:${ugate:-<缺行>})——'待执行 + done'后门组合,拦截" >&2
       failed=1
-    elif ! grep -qEi "pixel-diff|结构化断言" <<< "${ugate}" \
-       || ! grep -qE "[0-9]+(\.[0-9]+)?%|[0-9]+ */ *[0-9]+" <<< "${ugate}" \
-       || ! grep -qEi "PASS" <<< "${ugate}"; then
-      echo "🚫 ${card}:ui-gate 缺视觉验收证据三要素(pixel-diff/结构化断言字样 + 差异或 n/m 数字 + PASS)——" >&2
-      echo "   当前:「${ugate}」。验收器漂移 = 虚假通过:禁止以摘录对账/测试绿/目测顶替 pixel-diff 或断言,缺能力即停止上报" >&2
-      failed=1
+    else
+      # 路线判定:取首个页面规格的 source_anchor(页面文件存在性/指针有效性由 page-excerpt-check 执法,不重复)
+      local route="unknown" first_page anchor
+      first_page="${usp%%,*}"; first_page="${first_page//[[:space:]]/}"
+      if [ -f "${first_page}" ]; then
+        anchor="$(fm "${first_page}" source_anchor)"
+        case "${anchor}" in
+          *.html*|*.HTML*) route="html" ;;
+          *figma*|*Figma*|*FIGMA*) route="figma" ;;
+        esac
+      fi
+      local has_pd has_assert has_num has_pass
+      has_pd="$(grep -qi "pixel-diff" <<< "${ugate}" && echo 1 || echo 0)"
+      has_assert="$(grep -q "结构化断言" <<< "${ugate}" && echo 1 || echo 0)"
+      has_num="$(grep -qE "[0-9]+(\.[0-9]+)?%|[0-9]+ */ *[0-9]+" <<< "${ugate}" && echo 1 || echo 0)"
+      has_pass="$(grep -qi "PASS" <<< "${ugate}" && echo 1 || echo 0)"
+      local route_ok=0 route_hint=""
+      case "${route}" in
+        html)  if [ "${has_pd}" = 1 ]; then route_ok=1; fi
+               route_hint="HTML 路线(source_anchor 指向 .html 原型)须 pixel-diff 证据,结构化断言字样不适用——路线谎报拦截" ;;
+        figma) if [ "${has_assert}" = 1 ]; then route_ok=1; fi
+               route_hint="设计稿路线(source_anchor 指向 figma)须结构化断言证据,pixel-diff 字样不适用——路线谎报拦截" ;;
+        *)     if [ "${has_pd}" = 1 ] || [ "${has_assert}" = 1 ]; then route_ok=1; fi
+               route_hint="路线未判出(页面文件不可读),按双字样宽松判据" ;;
+      esac
+      if [ "${route_ok}" = 0 ] || [ "${has_num}" = 0 ] || [ "${has_pass}" = 0 ]; then
+        echo "🚫 ${card}:ui-gate 视觉验收证据不合规——${route_hint}。" >&2
+        echo "   当前:「${ugate}」。三要素 = 路线对应字样 + 差异或 n/m 数字 + PASS;禁止以摘录对账/测试绿/目测顶替,缺能力即停止上报" >&2
+        failed=1
+      fi
     fi
   fi
 

@@ -21,6 +21,7 @@
 | 越界检测？ | 无 → 装 assets/boundary-check.sh（P1） |
 | 风险区门禁？ | 风险区清单非空而无门禁 → 装 assets/risk-zone-check.sh + `[risk-ok: @<批准人>]` 约定（P1）——清单非空而门禁缺失 = AI 可擅改风险区 |
 | 测试对应性检查？ | 改行为代码必须给出 AC↔测试对应——装 assets/ac-coverage-check.sh（P1，开箱）：卡声明 ## 测试文件清单 + spec_ac 校验（taskcard-template 定义格式）；断言语义对应仍归人审三焦点 |
+| UI 执法脚本落位？（适用 UI 规范管线项目） | 使用 jjspec UI 规范管线的项目，门禁脚本**必须落项目副本**（技能库是本机私有仓库，CI/协作者环境拿不到）：`page-excerpt-check.sh`、`task-done-gate.sh`、`pixel-diff.mjs`、`ui-pack-check.sh`、`menu-recon-check.sh` 拷入项目 `tools/ci/`，**副本头部登记来源版本戳**（拷自技能库 commit 短 hash，技能库升级后重拷防双源漂移），CI 挂载 `--diff` 批量模式（在场卡对账打回）；`tools/ci/**` 属项目风险区的，拷贝动作 AI 执行、commit 按该项目 AGENTS.md 走 `[risk-ok: @<批准人>]`。已接入项目在下次体检时补落——缺副本 = 视觉验收/摘录对账仅靠 AI 自觉跑单卡模式，机械闭环破口 |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 
 ### C. 文档层（L3）
