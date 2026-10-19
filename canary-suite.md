@@ -1,15 +1,15 @@
 ---
 title: 技能金丝雀测试案例集（canary-suite）
 type: canary-suite
-version: v1.2
-date: 2026-10-15
+version: v1.3
+date: 2026-10-19
 maintainer: 李晶
-applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定基线 v1.0.0）· jjspec skill（判定基线 v1.8.1，分册机制）
+applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定基线 v1.0.0）· jjspec skill（判定基线 v1.8.1，分册机制）
 ---
 
 # 技能金丝雀测试案例集
 
-> 体系是概率组件：技能的重大变更会静默漂移——规则措辞、触发结构、宿主或模型的改动都可能让"以前判对"的场景判错。本案例集按技能固化最小可复现场景（jjfullstack 5 例 · jjagent 5 例 · jjspec 2 例），重大变更前后必须真实跑一遍，量化漂移后再放量（理念同 jjspec `references/evaluation.md` 的金丝雀任务集）。
+> 体系是概率组件：技能的重大变更会静默漂移——规则措辞、触发结构、宿主或模型的改动都可能让"以前判对"的场景判错。本案例集按技能固化最小可复现场景（jjfullstack 6 例 · jjagent 5 例 · jjspec 2 例），重大变更前后必须真实跑一遍，量化漂移后再放量（理念同 jjspec `references/evaluation.md` 的金丝雀任务集）。
 
 ## 1. 触发时机（必跑）
 
@@ -26,12 +26,12 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 1. 逐场景以对应技能的**模式 A（架构设计）真实执行**（体检场景走模式 B）——输入 §3 的需求卡，真实产出 HLD（含对应技能标注的注入章节与执行留痕），禁止用推演回放或记忆结论替代；jjspec 场景的执行方式特例见 §3.3（产出分册 PRD 而非 HLD）
 2. 留痕硬要求：产出须附程序执行留痕（端数判定输入、所走程序名、评分表或判据链；jjspec 场景为三重校验原始对账清单）——无留痕 = 标称失准 = 未执行
-3. 产出后按 §4 对应技能的判定判据逐条比对；全绿才算通过（jjfullstack 7 条 / jjagent 6 条 / jjspec 6 条）
+3. 产出后按 §4 对应技能的判定判据逐条比对；全绿才算通过（jjfullstack 8 条 / jjagent 6 条 / jjspec 6 条）
 4. 跑完在 §6 执行记录表登记一行
 
 ## 3. 场景集
 
-### 3.1 jjfullstack（5 例）
+### 3.1 jjfullstack（6 例）
 
 ### CANARY-1 出行平台一期（三大项 + 统一服务端）
 
@@ -48,7 +48,7 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 **预期**：4 仓——乘客 monorepo（apps/mp-weixin）+ 司机 monorepo（apps/ios + apps/android，四步程序留痕）+ 运营后台常规单仓 + 统一服务端独立常规仓（契约本体住 server，各 monorepo api-contract 放生成工件 + CI 漂移检查）。
 
-验证点：端型判定 ×2、管理后台类判定、服务端归属（跨大项共享）、司机大项四步程序完整留痕（端清单/覆盖过滤/评分表/投降条件）。
+验证点：端型判定 ×2、管理后台类判定、服务端归属（跨大项共享）、司机大项四步程序完整留痕（端清单/覆盖过滤/评分表/投降条件）、API 路径按资源域组织不按端/台切前缀（R-U12——统一服务端服务三大项的多消费方射程）。
 
 ### CANARY-2 内部报表后台（纯管理后台）
 
@@ -80,7 +80,24 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 **预期**：3 仓——mall-mp **维持 monorepo**（加端触发四步选型但仓形态不变，apps/ 新增 h5）、新建 rider-app monorepo（**不并入** mall-mp）、platform-server 维持独立仓（现服务 2 个大项）。
 
-验证点：加端不改仓形态（解耦的设计意图落地）、"多个业务大项并入一仓"违反信号拦截、存量仓维持不迁仓、四步程序在演进场景照常留痕。
+验证点：加端不改仓形态（解耦的设计意图落地）、未通过族并仓判定的跨大项并仓拦截（骑手端型大项并入商城仓）、存量仓维持不迁仓、四步程序在演进场景照常留痕。
+
+### CANARY-6 鱼找找三管理台（多管理后台族并仓）
+
+需求输入：
+
+| 业务 | 使用者 | 端载体 |
+|---|---|---|
+| 平台运营管理 | 平台运营人员 | Web 管理后台（PC） |
+| 司机域运营管理 | 司机域运营人员 | Web 管理后台（PC） |
+| 设备运维管理 | 设备运维人员 | Web 管理后台（PC） |
+| 服务端 | — | 统一 API 服务三台，无专属 BFF |
+
+约束：三台功能菜单完全不同；自建设计系统（设计令牌 + 基础组件）；统一错误结构处理跨台一致；技术栈与交互范式同构（同为 PC 管理控制台）。
+
+**预期**：2 仓——管理后台族 monorepo（apps/ 三台各一应用、台间禁互引；packages/ 最小集：api-client 必建——生成工件 + CI 漂移检查、design-system 自建必建、shared 按需；不套端型四件套）+ 统一服务端独立常规仓（契约本体住服务端仓）。
+
+验证点：族并仓三条件逐项判定留痕（同物种/契约同源/共享诉求 ≥ 2 类——共用后端时 API client 计 1 类、自建设计系统计第 2 类）、R-U30 不套端型四件套、api-client 单包按域分模块不按台拆（R-U28 族条款）、API 路径按资源域组织不按台切前缀（R-U12）、服务端归属（跨大项共享 → 独立仓 + 生成工件 + 漂移检查）、单源联动触发（≥2 消费方共享资产注入工程化落位）。
 
 ### 3.2 jjagent（5 例）
 
@@ -148,7 +165,7 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 
 各技能场景按下表逐条比对，任一不满足 = 变更引入漂移：
 
-### 4.1 jjfullstack（7 条）
+### 4.1 jjfullstack（8 条）
 
 | # | 判据 |
 |---|---|
@@ -159,6 +176,7 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 | 5 | R-U30 两层结构：端型 monorepo 四件套必建；未确认端实现包不预写；非端型仓不建空壳 packages/ |
 | 6 | 程序留痕齐全：退化程序（端数 + 判据链）/ 四步程序（端清单 + 覆盖过滤 + 评分表 + 投降条件） |
 | 7 | 术语登记：AGENTS.md 拟新增条目含"业务大项（非行业通用术语）" |
+| 8 | 族并仓判定（仅当已确认管理后台类大项 ≥ 2 时评估）：三条件逐项判定留痕、满足方落族 monorepo 结构（台间禁互引 + packages 最小集 + 不套端型四件套）；单大项/端型场景不误入族判定 |
 
 ### 4.2 jjagent（6 条）
 
@@ -201,3 +219,5 @@ applies_to: jjfullstack skill（判定基线 v2.3.0）· jjagent skill（判定�
 | 2026-10-15 | jjspec v1.8.1 | PRD 分册机制放量前必跑：v1.8.0 新增分册 + v1.8.1 触发词收敛（删「大需求」、主次定序）；jjspec 场景集 S1/S2 收编建册（canary-suite v1.2，本行即建册首跑） | 2/2 通过 | §4.3 六判据全绿；S1 计数对账 4=2+2、归属唯一 4/4、三产物 status=draft 停定稿前；S2 R7 三块 diff 逐字符一致、R6 保号、Scenario 3=3、行级覆盖 121 行未命中 12 行全为元信息/骨架行（frontmatter/版本表 v1.0 行/变更续接/关联文档骨架）；留痕 /tmp/canary-jjspec-20261015/（verification.txt + verify.sh）；S2 构造存量（⚠️ 构造） |
 | 2026-10-15 | jjfullstack v2.3.0 / jjagent v1.0.0 | 豁免登记：本次变更仅触及 jjspec（分册机制），两技能规则文件零改动、判定语义无变化（§1 豁免条款） | 豁免 | 不跑场景 |
 | 2026-10-16 | jjfullstack v2.3.0 + jjagent v1.0.0 + jjspec v1.8.1 | UI 真源绑定机制入库（宪法第九节 / ui-spec-guide / prd-template 第 8 章 / spec+taskcard 承接位 / gates 视觉回归）+ 对读单源收敛（视觉组分支指针 9.4→9.9、采集条件/理由段/Token 判据归一）首提交前必跑；全量 12 例重跑（C1~C5 / J1~J5 / S1~S2） | 12/12 通过 | §4.1 七判据 / §4.2 六判据 / §4.3 六判据全绿；jjspec 场景仅覆盖分册路径，UI 管线场景 S3 待建（UI 增量靠人工对读审查放行）；发现 R-AG25 前提与违反信号边界张力（单租户预建 tenant_id 判 ➖，执法点经优化建议保留，待维护澄清）；留痕 /tmp/canary-full-20261016/（jjfullstack 5 HLD、jjagent 4 HLD + J5 体检报告 + 样例仓库、jjspec 分册产物 + verification.txt；J4/J5 为 ⚠️ 构造） |
+| 2026-10-19 | jjfullstack v2.4.0 | R-U28 新增第三层·管理后台族并仓判定（三条件：同物种/契约同源/共享诉求 ≥ 2 类）+ 违反信号精确化（多大项并仓须过族判定）+ R-U30 族排除条款 + hld-injection 仓库形态枚举扩展 + SKILL.md 模式 A 措辞同步；CANARY-6 建册首跑 + C1/C2/C5 回归（§1 规则语义修订必跑；canary-suite v1.3，判定判据增至 §4.1 八条） | 4/4 通过 | §4.1 八判据全绿（C2 判据 7 按最小注入纪律不适用）；C6 族三条件逐项留痕（API client + 自建设计系统 + 统一错误结构 = 3 类共享）；反向验证全过——C1/C2 单大项不误入族判定、C5 端型大项间并仓仍被拦截；留痕 /tmp/canary-jjfullstack-20261019/（C1/C2/C5/C6 四份 HLD + verification.md） |
+| 2026-10-19 | jjfullstack v2.4.0 | 同日补充：R-U12 增 API 路径按资源域组织纪律（同一资源不因消费方不同复制多套路径，差异出口 = 权限点 + R-U14⑧ 响应过滤 / BFF R-U16）+ R-U28 族条款增 api-client 单包按域分模块纪律（禁按台拆多包）；C6 全量重跑 + C1 回归（R-U28 条件变更必跑；C1/C6 验证点同步补 R-U12 射程） | 2/2 通过 | §4.1 八判据全绿；新纪律 C6 正向落位（接口设计节路径留痕 + 单包留痕）、C1 多消费方（三大项共用后端）射程无冲突；C1 4 仓结论零漂移；留痕 /tmp/canary-jjfullstack-20261019/（C1/C6 HLD + verification.md，覆盖上轮同名文件） |
