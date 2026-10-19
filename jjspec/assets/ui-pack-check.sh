@@ -191,7 +191,7 @@ for p in "${pages[@]}"; do
           split($0, cells, "|")
           id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
           if(!header++){next}
-          if(id=="" || seen[id]++) print id=="" ? "空源定位符" : "重复源定位符 " id
+          if(id=="" || seen[id]++) print (id=="" ? "空源定位符" : "重复源定位符 " id)
         }
       ' "${p}")"
       [ -z "${bad_node_ids}" ] || fail "${base} 节点样式量化表源定位符缺失或重复：${bad_node_ids}"
@@ -213,7 +213,7 @@ for p in "${pages[@]}"; do
           split($0, cells, "|")
           id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
           if(!header++){next}
-          if(id=="" || seen[id]++) print id=="" ? "空源定位符" : "重复源定位符 " id
+          if(id=="" || seen[id]++) print (id=="" ? "空源定位符" : "重复源定位符 " id)
         }
       ' "${p}")"
       [ -z "${bad_coverage_ids}" ] || fail "${base} 源节点覆盖账本定位符缺失或重复：${bad_coverage_ids}"
