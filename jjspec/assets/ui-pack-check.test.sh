@@ -14,6 +14,9 @@ trap 'rm -rf "${WORK}"' EXIT
 FAILED=0
 expect() { # expect <场景名> <期望退出码> <输出须含的模式(空=不查)> <被检目录…>
   local name="$1" want="$2" pat="${3:-}"; shift 3
+  if [ "${want}" -eq 0 ] && [[ " $* " == *" --require-digest "* ]]; then
+    prepare_digest_fixture "$1"
+  fi
   local rc out
   out="$(bash "${SCRIPT}" "$@" 2>&1)" && rc=0 || rc=$?
   if [ "${rc}" -eq "${want}" ] && { [ -z "${pat}" ] || grep -q "${pat}" <<< "${out}"; }; then
@@ -23,6 +26,41 @@ expect() { # expect <场景名> <期望退出码> <输出须含的模式(空=不
     echo "---- 输出 ----"; echo "${out}"; echo "--------------"
     FAILED=1
   fi
+}
+
+prepare_digest_fixture() { # add source scan ledger to otherwise-valid quantified test fixtures
+  local d="$1" p n
+  for p in "${d}"/pages/p-*.md; do
+    [ -f "${p}" ] || continue
+    grep -q '^digest: quantified$' "${p}" || continue
+    n="$(awk '
+      /^## 节点样式量化表/{in_table=1;next}
+      /^## /&&in_table{exit}
+      in_table&&/^\|/{line=$0;gsub(/[[:space:]]/,"",line);if(line !~ /^\|[-:|]+\|$/) rows++}
+      END{print (rows > 0 ? rows-1 : 0)}
+    ' "${p}")"
+    if ! grep -q '^source_node_count:' "${p}"; then
+      awk -v n="${n}" '/^digest: quantified$/{print;print "source_node_count: " n;next}{print}' "${p}" > "${p}.tmp" && mv "${p}.tmp" "${p}"
+    fi
+    if ! grep -q '^## 源节点覆盖对账' "${p}"; then
+      {
+        printf '\n## 源节点覆盖对账\n\n| 源定位符 | 分类/处理方式 | 量化表对应行 | 排除理由 |\n|---|---|---|---|\n'
+        awk '
+          /^## 节点样式量化表/{in_table=1;next}
+          /^## /&&in_table{exit}
+          in_table&&/^\|/ {
+            line=$0; gsub(/[[:space:]]/,"",line)
+            if(line ~ /^\|[-:|]+\|$/) next
+            split($0, cells, "|")
+            id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+            if(!header++){next}
+            printf "| %s | 量化 | %s | — |\n", id, id
+          }
+        ' "${p}"
+        printf '源节点覆盖: source=%s spec=%s uncovered=0\n' "${n}" "${n}"
+      } >> "${p}"
+    fi
+  done
 }
 
 mk_pack() { # mk_pack <目标目录> —— 构造最小合规包
@@ -246,5 +284,15 @@ expect "unreachable：定稿门禁拦截" 1 "结构类复刻阻塞" "${WORK}/c30
 
 # 场景37：同 c30 包不带开关 → 放行（生成期挂起登记合法）
 expect "向后兼容：无定稿开关不校验 unreachable" 0 "UI-PACK PASS" "${WORK}/c30"
+
+# 场景38：源节点扫描数大于量化表行数 → --require-digest 拦截
+mk_pack "${WORK}/c31"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nsource_node_count: 2\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 源节点ID | 量化 |\n|---|---|\n| 1:2:3 | btn h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n\n## 源节点覆盖对账\n源节点覆盖: source=2 spec=1 uncovered=1\n' > "${WORK}/c31/pages/p-01-login.md"
+expect "源节点数大于量化行数拦截" 1 "数量不一致" "${WORK}/c31" --require-digest
+
+# 场景39：计数相同但覆盖账本 locator 与量化表错配 → 拦截
+mk_pack "${WORK}/c32"
+printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nsource_node_count: 1\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 源定位符 | 量化 |\n|---|---|\n| 1:2:3 | btn h44 p16 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n\n## 源节点覆盖对账\n\n| 源定位符 | 分类/处理方式 | 量化表对应行 | 排除理由 |\n|---|---|---|---|\n| 1:2:4 | 量化 | 1:2:3 | — |\n源节点覆盖: source=1 spec=1 uncovered=0\n' > "${WORK}/c32/pages/p-01-login.md"
+expect "覆盖账本定位符错配拦截" 1 "定位符集合不一致" "${WORK}/c32" --require-digest
 
 [ "${FAILED}" -eq 0 ] && echo "ALL PASS" || exit 1

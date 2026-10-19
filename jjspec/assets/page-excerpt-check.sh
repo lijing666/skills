@@ -7,18 +7,19 @@
 #
 # 裁决口径(全部 fail-closed:解析不了/对不上 = 不通过):
 #   ① 页面卡(frontmatter 含 ui_source_page)必须有「## UI 规格摘录」节,缺失 = FAIL
-#   ② 五个标签块齐全:节点样式摘录/布局语义摘录/静态文案摘录/九态映射/摘录覆盖率
+#   ② 六个标签块齐全:节点样式摘录/源节点覆盖账本摘录/布局语义摘录/静态文案摘录/九态映射/摘录覆盖率
 #   ③ 占位检测:「摘录覆盖率」登记行 N/M 必须为纯数字(模板占位符 <摘录条数> 解析即失败)
 #   ④ N=M 严格对账(核心):N_declared == N_actual == M_actual == M_declared
 #      - N_actual = 摘录节「节点样式摘录」块下的条目行数(一行一节点)
+#      - 覆盖账本摘录条数 == 节点样式摘录条数(模板要求逐节点一一对应;缩进/表格式书写计 0 即拦)
 #      - M_actual = ui_source_page 各页「## 节点样式量化表」数据行数之和(表格行 - 表头 - 分隔行)
 #      - 一行说明句 vs 量化表数十节点 → 对账必穿帮,占位无处遁形
-#   ⑤ 布局语义/静态文案/九态映射三块非空(全量性对账待文案清单格式稳定后扩展,见 TODO)
+#   ⑤ 账本摘录/布局语义/静态文案/九态映射四块非空(全量性对账待文案清单格式稳定后扩展,见 TODO)
 #   ⑥ ui_source_page 指向的页面文件必须存在(指针悬空 = FAIL);多页逗号/空格分隔,M 求和
 #
 # 转抄格式约定(与 taskcard-template 摘录节占位符一致,解析依赖此结构):
-#   - 标签行保留作为分块锚点(- 节点样式摘录(逐节点全量): / - 布局语义摘录(逐条): /
-#     - 静态文案摘录(逐条): / - 九态映射: / - 摘录覆盖率:N=<数字> / M=<数字>)
+#   - 标签行保留作为分块锚点(- 节点样式摘录(逐节点全量): / - 源节点覆盖账本摘录(逐节点全量): /
+#     - 布局语义摘录(逐条): / - 静态文案摘录(逐条): / - 九态映射: / - 摘录覆盖率:N=<数字> / M=<数字>)
 #   - 各标签行下平级 `- ` 条目,一行一节点/一条;登记行固定节尾
 #
 # 用法:
@@ -86,6 +87,7 @@ count_excerpt_items() {
       line=$0
       is_tag = 0
       if (line ~ /^- 节点样式摘录/)      { cur="ns"; is_tag=1 }
+      else if (line ~ /^- 源节点覆盖账本摘录/) { cur="ledger"; is_tag=1 }
       else if (line ~ /^- 布局语义摘录/) { cur="lay"; is_tag=1 }
       else if (line ~ /^- 静态文案摘录/) { cur="copy"; is_tag=1 }
       else if (line ~ /^- 九态映射/)     { cur="st"; is_tag=1 }
@@ -124,8 +126,8 @@ check_one_card() {
     FAILED=1; return 0
   fi
 
-  # ② 五标签块齐全性
-  for tag in "节点样式摘录" "布局语义摘录" "静态文案摘录" "九态映射" "摘录覆盖率"; do
+  # ② 六标签块齐全性
+  for tag in "节点样式摘录" "源节点覆盖账本摘录" "布局语义摘录" "静态文案摘录" "九态映射" "摘录覆盖率"; do
     if ! grep -q "^- ${tag}" "${SEC_TMP}"; then
       reason+="\n   缺标签块「${tag}」(转抄格式见 taskcard-template 摘录节)"
     fi
@@ -161,12 +163,20 @@ check_one_card() {
   m_actual="${m_sum}"
   if [ "${nd}" -ne "${n_actual}" ] || [ "${md}" -ne "${m_actual}" ] || [ "${n_actual}" -ne "${m_actual}" ]; then
     echo "🚫 ${card}:N=M 严格对账失败——登记 N=${nd}/M=${md},实际节点样式条目 N=${n_actual},页面量化表节点 M=${m_actual}。" >&2
-    echo "   摘录 = 执行动作非模板填空:必须实际转抄 ui_source_page 三表,禁止抄规则文字/说明句占位" >&2
+    echo "   摘录 = 执行动作非模板填空:必须实际转抄 ui_source_page 规格各表(含量盖账本),禁止抄规则文字/说明句占位" >&2
     FAILED=1; return 0
   fi
 
-  # ⑤ 其余三块非空(全量性对账 TODO:布局语义表/文案清单格式稳定后扩为逐段 N=M)
-  for tag in "布局语义摘录" "静态文案摘录" "九态映射"; do
+  # ④' 覆盖账本摘录与节点样式摘录一一对应(逐节点全量;缩进/表格式书写计 0 即拦,防逃逸)
+  local ledger_actual
+  ledger_actual="$(count_excerpt_items "${SEC_TMP}" "源节点覆盖账本摘录")"
+  if [ "${ledger_actual}" -ne "${n_actual}" ]; then
+    echo "🚫 ${card}:覆盖账本摘录(${ledger_actual}条)与节点样式摘录(${n_actual}条)不一一对应——逐节点全量落空,平级 - 条目一行一节点,禁止缩进/表格式书写" >&2
+    FAILED=1; return 0
+  fi
+
+  # ⑤ 其余四块非空(全量性对账 TODO:布局语义表/文案清单格式稳定后扩为逐段 N=M)
+  for tag in "源节点覆盖账本摘录" "布局语义摘录" "静态文案摘录" "九态映射"; do
     if ! block_nonempty "${SEC_TMP}" "${tag}"; then
       echo "🚫 ${card}:「${tag}」块为空——逐条转抄要求落空,fail-closed" >&2
       failed=1

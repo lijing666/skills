@@ -24,6 +24,7 @@
 #      采集判据见 ui-spec-guide 生成管线步 2 导航结构采集，宪法第九节第 12 条——缺失或枚举外值即拦）
 #      与「## 文案清单」段（静态结构文案封闭清单 + 动态数据区选择器，文案覆盖率断言数据源，
 #      见 ui-spec-guide 第三节第 7 条——缺段即拦）
+#      source_node_count 必须等于量化表与覆盖账本行数；两表首列定位符集合相同且唯一，登记 source=N spec=N uncovered=0
 #   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
 #      icons.json 的 svg 字段指向，文件必须实际存在
 #   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
@@ -170,6 +171,91 @@ for p in "${pages[@]}"; do
         [ -z "${bad_entry}" ] || fail "${base} entry 枚举非法: ${bad_entry}（允许 menu/internal-tab/internal-entry/drawer/modal/unreachable，多值逗号分隔）"
       fi
       grep -q '^## 文案清单' "${p}" || fail "${base} 缺「## 文案清单」段（静态结构文案封闭清单 + 动态数据区选择器，文案覆盖率断言数据源，见 ui-spec-guide 第三节第 7 条）"
+      source_count="$(awk 'NR==1&&/^---[[:space:]]*\r?$/{fm=1;next} fm&&/^---[[:space:]]*\r?$/{exit} fm&&/^source_node_count:/{sub(/^source_node_count:[[:space:]]*/,"");gsub(/\r$/,"");print;exit}' "${p}")"
+      quant_count="$(awk '
+        /^## 节点样式量化表/{in_table=1;next}
+        /^## /&&in_table{exit}
+        in_table&&/^\|/{
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line ~ /^\|[-:|]+\|$/) next
+          rows++
+        }
+        END{print (rows > 0 ? rows-1 : 0)}
+      ' "${p}")"
+      bad_node_ids="$(awk '
+        /^## 节点样式量化表/{in_table=1;next}
+        /^## /&&in_table{exit}
+        in_table&&/^\|/{
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line ~ /^\|[-:|]+\|$/) next
+          split($0, cells, "|")
+          id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+          if(!header++){next}
+          if(id=="" || seen[id]++) print id=="" ? "空源定位符" : "重复源定位符 " id
+        }
+      ' "${p}")"
+      [ -z "${bad_node_ids}" ] || fail "${base} 节点样式量化表源定位符缺失或重复：${bad_node_ids}"
+      coverage_count="$(awk '
+        /^## 源节点覆盖对账/{in_section=1;next}
+        /^## /&&in_section{exit}
+        in_section&&/^\|/ {
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line !~ /^\|[-:|]+\|$/) rows++
+        }
+        END{print (rows > 0 ? rows-1 : 0)}
+      ' "${p}")"
+      bad_coverage_ids="$(awk '
+        /^## 源节点覆盖对账/{in_section=1;next}
+        /^## /&&in_section{exit}
+        in_section&&/^\|/ {
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line ~ /^\|[-:|]+\|$/) next
+          split($0, cells, "|")
+          id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+          if(!header++){next}
+          if(id=="" || seen[id]++) print id=="" ? "空源定位符" : "重复源定位符 " id
+        }
+      ' "${p}")"
+      [ -z "${bad_coverage_ids}" ] || fail "${base} 源节点覆盖账本定位符缺失或重复：${bad_coverage_ids}"
+      quant_ids="$(awk '
+        /^## 节点样式量化表/{in_table=1;next}
+        /^## /&&in_table{exit}
+        in_table&&/^\|/ {
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line ~ /^\|[-:|]+\|$/) next
+          split($0, cells, "|")
+          id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+          if(!header++) next
+          print id
+        }
+      ' "${p}" | LC_ALL=C sort)"
+      coverage_ids="$(awk '
+        /^## 源节点覆盖对账/{in_section=1;next}
+        /^## /&&in_section{exit}
+        in_section&&/^\|/ {
+          line=$0; gsub(/[[:space:]]/,"",line)
+          if(line ~ /^\|[-:|]+\|$/) next
+          split($0, cells, "|")
+          id=cells[2]; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
+          if(!header++) next
+          print id
+        }
+      ' "${p}" | LC_ALL=C sort)"
+      [ "${quant_ids}" = "${coverage_ids}" ] || fail "${base} 覆盖账本与量化表的源定位符集合不一致"
+      if ! [[ "${source_count}" =~ ^[0-9]+$ ]]; then
+        fail "${base} 缺合法 source_node_count（必须来自完整源节点扫描）"
+      elif [ "${source_count}" -ne "${quant_count}" ]; then
+        fail "${base} 源节点覆盖数量不一致：source_node_count=${source_count}，节点样式量化表行数=${quant_count}"
+      elif [ "${source_count}" -ne "${coverage_count}" ]; then
+        fail "${base} 源节点覆盖账本数量不一致：source_node_count=${source_count}，覆盖账本行数=${coverage_count}"
+      fi
+      coverage_line="$(awk '
+        /^## 源节点覆盖对账/{in_coverage=1;next}
+        /^## /&&in_coverage{exit}
+        in_coverage&&/^源节点覆盖:/{print;exit}
+      ' "${p}")"
+      [ "${coverage_line}" = "源节点覆盖: source=${source_count:-invalid} spec=${quant_count} uncovered=0" ] \
+        || fail "${base} 缺源节点覆盖对账或未满足 source=N spec=N uncovered=0"
     fi
   fi
 done
