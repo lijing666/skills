@@ -33,6 +33,7 @@
 #        6e 矢量/位图行素材列 ∈ {assets/<文件>, icons/<icon-xxx>, 代码复刻, 豁免, 人工补录} 且引用文件/条目实际存在
 #        6f 覆盖账本矢量/位图条目「分类/处理方式」∈ 封闭处置态（图标位/导出资产/代码复刻/豁免/人工补录）
 #        6g 量化表有 TEXT 行则文案清单静态区非空（空清单将使文案覆盖率断言全 FAIL）
+#        6h 颜色/填充列渐变值括号配对完整（防提取脚本字符预算截断——半截渐变是非法视觉真源）
 #   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
 #      icons.json 的 svg 字段指向，文件必须实际存在
 #   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
@@ -221,7 +222,7 @@ for p in "${pages[@]}"; do
       elif ! grep -q '^## 布局语义表' "${p}"; then
         fail "${base} digest=quantified 但缺「## 布局语义表」段落（布局方向/对齐/auto 行高/字间距/截断，guide「布局语义必须入表」（量化表定义）；纯坐标堆叠不构成 quantified）"
       fi
-      # ── 6c–6g) 量化表字段级有效性（判据见 ui-spec-guide「厚规格完整性门槛」）──
+      # ── 6c–6h) 量化表字段级有效性（判据见 ui-spec-guide「厚规格完整性门槛」）──
       if [ "${digest}" = "quantified" ] && grep -q '^## 节点样式量化表' "${p}"; then
         field_problems=""
         if ! field_problems="$(python3 - "$p" "$DIR" <<'PYEOF'
@@ -261,6 +262,7 @@ type_i = col('类型', '分类')
 text_i = col('文案')
 asset_i = col('素材')
 role_i = col('角色')
+color_i = col('颜色', '填充')
 
 if asset_i < 0:
     problems.append(base + ' 6c 量化表缺「素材/资产引用」必备列（最小封闭列集，见 ui-spec-guide 厚规格完整性门槛）')
@@ -309,6 +311,11 @@ for n, row in enumerate(data, start=2):
             stem = os.path.basename(v)
             if not os.path.exists(os.path.join(pack, v)) and stem not in icon_names:
                 problems.append(base + ' 6e 量化表第' + str(n) + '行 图标引用不存在（文件与 icons.json 条目均未命中）: ' + v)
+    if color_i >= 0 and color_i < len(row):
+        for seg in re.findall(r'渐变[:：]\s*(\S.*)', row[color_i]):
+            seg = seg.strip()
+            if seg.count('(') != seg.count(')'):
+                problems.append(base + ' 6h 量化表第' + str(n) + '行 渐变值括号不配对（疑提取脚本字符预算截断，须回填完整值，禁止以半截渐变作视觉真源）: ' + seg[:80])
 
 cov = parse_table(section(text, '源节点覆盖对账'))
 if len(cov) > 1:

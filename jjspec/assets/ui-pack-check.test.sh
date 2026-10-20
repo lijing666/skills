@@ -5,7 +5,7 @@
 #       位图素材=assets 缺 assets.md / 素材清单未处置条目 / 字体族=assets 缺 assets.md /
 #       页面跳号 / 页面缺锚点 / 缺 tokens / 非法 JSON / 引用素材不出清单 /
 #       icons.json svg 指向缺失 / 品牌字体缺字体文件条目 / 品牌字体有字体条目放行 /
-#       6c 素材与文案必备列 / 6d TEXT 文案位 / 6e 矢量素材引用 / 6f 账本处置态 / 6g 文案清单非空 /
+#       6c 素材与文案必备列 / 6d TEXT 文案位 / 6e 矢量素材引用 / 6f 账本处置态 / 6g 文案清单非空 / 6h 渐变完整性 /
 #       3b assets.md 用途页面值域（画布名拦截 / p-xx·通用·豁免·人工补录放行）
 set -euo pipefail
 
@@ -314,16 +314,55 @@ mk_quant_page() { # mk_quant_page <目录> —— 构造带矢量/文本行、�
   printf '{"icons":[{"name":"icon-001","svg":"icon-001.svg"}]}' > "${d}/icons/icons.json"
   printf 'x' > "${d}/icons/icon-001.svg"
   printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途页面 | 处置 |\n|---|---|---|---|---|\n| hero.png | 插画 | figma 9:9 | p-01 | 已导出 |\n' > "${d}/assets/assets.md"
-  printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nsource_node_count: 3\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| 节点/父级路径 | 类型/名称 | 文案/字体排版 | 素材/资产引用 | 量化 |\n|---|---|---|---|---|\n| 1:10 | TEXT | 欢迎来到鱼找找 \\| PuHuiTi 36 w700 | — | x16 y20 |\n| 1:20 | IMAGE-SVG「Mask」 | — | assets/hero.png | x0 y0 402×347 |\n| 1:30 | IMAGE-SVG「Icon」 | — | icons/icon-001 | x18 y18 |\n\n## 布局语义表\n\n| 坐标键 | 节点 | 方向 |\n|---|---|---|\n| (0,0) 402×874 | root | 纵排 |\n\n## 文案清单\n\n- 欢迎来到鱼找找\n- 源头水产快速对接\n\n动态数据区：.demo-data\n\n## 源节点覆盖对账\n\n| 源定位符 | 分类/处理方式 | 量化表对应行 | 排除理由 |\n|---|---|---|---|\n| 1:10 | 文本 | 1:10 | — |\n| 1:20 | 导出资产 | 1:20 | — |\n| 1:30 | 图标位 | 1:30 | — |\n源节点覆盖: source=3 spec=3 uncovered=0\n' > "${d}/pages/p-01-login.md"
+  cat > "${d}/pages/p-01-login.md" <<'EOF'
+---
+title: 登录
+source_anchor: figma 1:2
+digest: quantified
+source_node_count: 3
+entry: menu
+---
+# 登录
+
+## 节点样式量化表
+
+| 节点/父级路径 | 类型/名称 | 文案/字体排版 | 颜色/填充 | 素材/资产引用 | 量化 |
+|---|---|---|---|---|---|
+| 1:10 | TEXT | 欢迎来到鱼找找 \| PuHuiTi 36 w700 | #FFFFFF | — | x16 y20 |
+| 1:20 | IMAGE-SVG「Mask」 | — | 渐变: linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 255, 255, 0) 44%) | assets/hero.png | x0 y0 402×347 |
+| 1:30 | IMAGE-SVG「Icon」 | — | #0A84FF | icons/icon-001 | x18 y18 |
+
+## 布局语义表
+
+| 坐标键 | 节点 | 方向 |
+|---|---|---|
+| (0,0) 402×874 | root | 纵排 |
+
+## 文案清单
+
+- 欢迎来到鱼找找
+- 源头水产快速对接
+
+动态数据区：.demo-data
+
+## 源节点覆盖对账
+
+| 源定位符 | 分类/处理方式 | 量化表对应行 | 排除理由 |
+|---|---|---|---|
+| 1:10 | 文本 | 1:10 | — |
+| 1:20 | 导出资产 | 1:20 | — |
+| 1:30 | 图标位 | 1:30 | — |
+源节点覆盖: source=3 spec=3 uncovered=0
+EOF
 }
 
 # 场景40：合规字段级形态 → 放行（6e assets 引用 + icons 条目引用 + 文案位实值 + 账本处置态）
 mk_quant_page "${WORK}/c33"
-expect "6c–6g：字段级合规放行" 0 "UI-PACK PASS" "${WORK}/c33" --require-digest p-01
+expect "6c–6h：字段级合规放行" 0 "UI-PACK PASS" "${WORK}/c33" --require-digest p-01
 
 # 场景41：6c 量化表缺素材列 → 拦截
 mk_quant_page "${WORK}/c34"
-sed 's/| 素材\/资产引用 | 量化 |/| 量化 |/' "${WORK}/c34/pages/p-01-login.md" | sed 's/| — | assets\/hero.png | x0 y0 402×347 |/| — | x0 y0 402×347 |/;s/| — | icons\/icon-001 | x18 y18 |/| — | x18 y18 |/;s/| 欢迎来到鱼找找 \\| PuHuiTi 36 w700 | — | x16 y20 |/| 欢迎来到鱼找找 \\| PuHuiTi 36 w700 | x16 y20 |/' > "${WORK}/c34/rm.tmp" && mv "${WORK}/c34/rm.tmp" "${WORK}/c34/pages/p-01-login.md"
+sed 's/| 素材\/资产引用 | 量化 |/| 量化 |/' "${WORK}/c34/pages/p-01-login.md" > "${WORK}/c34/rm.tmp" && mv "${WORK}/c34/rm.tmp" "${WORK}/c34/pages/p-01-login.md"
 expect "6c：缺素材列拦截" 1 "6c 量化表缺「素材/资产引用」必备列" "${WORK}/c34" --require-digest p-01
 
 # 场景42：6d TEXT 行文案位「—」→ 拦截
@@ -333,7 +372,7 @@ expect "6d：TEXT 文案位空拦截" 1 "6d 量化表第" "${WORK}/c35" --requir
 
 # 场景43：6e 矢量行素材列为空 → 拦截
 mk_quant_page "${WORK}/c36"
-sed 's/| — | assets\/hero.png | x0 y0 402×347 |/| — | — | x0 y0 402×347 |/' "${WORK}/c36/pages/p-01-login.md" > "${WORK}/c36/rm.tmp" && mv "${WORK}/c36/rm.tmp" "${WORK}/c36/pages/p-01-login.md"
+sed 's#assets/hero.png#—#' "${WORK}/c36/pages/p-01-login.md" > "${WORK}/c36/rm.tmp" && mv "${WORK}/c36/rm.tmp" "${WORK}/c36/pages/p-01-login.md"
 expect "6e：矢量行素材列空拦截" 1 "6e 量化表第" "${WORK}/c36" --require-digest p-01
 
 # 场景44：6e 素材引用文件不存在 → 拦截
@@ -356,9 +395,14 @@ mk_quant_page "${WORK}/c40"
 grep -vE '^- 欢迎来到鱼找找$|^- 源头水产快速对接$' "${WORK}/c40/pages/p-01-login.md" > "${WORK}/c40/rm.tmp" && mv "${WORK}/c40/rm.tmp" "${WORK}/c40/pages/p-01-login.md"
 expect "6g：TEXT 行存在静态文案区空拦截" 1 "6g 量化表存在 TEXT 行但文案清单静态区为空" "${WORK}/c40" --require-digest p-01
 
+# 场景48：6h 颜色列渐变值被截断（括号不配对）→ 拦截
+mk_quant_page "${WORK}/c43"
+sed 's/linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 255, 255, 0) 44%)/linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 25/' "${WORK}/c43/pages/p-01-login.md" > "${WORK}/c43/rm.tmp" && mv "${WORK}/c43/rm.tmp" "${WORK}/c43/pages/p-01-login.md"
+expect "6h：渐变截断拦截" 1 "6h 量化表第" "${WORK}/c43" --require-digest p-01
+
 # ── 3b assets.md 用途页面列值域（宪法第九节第 10 条，默认模式包级）──
 
-# 场景48：已导出条目用途页面登记画布名 → 拦截
+# 场景49：已导出条目用途页面登记画布名 → 拦截
 mk_pack "${WORK}/c41"
 sed 's/^| 位图素材 | 无 | 原型无位图 |/| 位图素材 | assets | 1 张背景图 |/' "${WORK}/c41/README.md" > "${WORK}/c41/rm.tmp" && mv "${WORK}/c41/rm.tmp" "${WORK}/c41/README.md"
 mkdir -p "${WORK}/c41/assets"
@@ -366,7 +410,7 @@ printf 'x' > "${WORK}/c41/assets/bg.png"
 printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途页面 | 处置 |\n|---|---|---|---|---|\n| bg.png | 背景 | figma 1:2 | 效果图 | 已导出 |\n' > "${WORK}/c41/assets/assets.md"
 expect "3b：用途页面画布名拦截" 1 "用途页面列值域非法" "${WORK}/c41"
 
-# 场景49：p-xx 多值（顿号）+「通用」放行；豁免/人工补录条目不校验用途页面 → 放行
+# 场景50：p-xx 多值（顿号）+「通用」放行；豁免/人工补录条目不校验用途页面 → 放行
 mk_pack "${WORK}/c42"
 sed 's/^| 位图素材 | 无 | 原型无位图 |/| 位图素材 | assets | 2 张图 |/' "${WORK}/c42/README.md" > "${WORK}/c42/rm.tmp" && mv "${WORK}/c42/rm.tmp" "${WORK}/c42/README.md"
 mkdir -p "${WORK}/c42/assets"
