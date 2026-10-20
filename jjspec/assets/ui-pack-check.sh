@@ -15,6 +15,8 @@
 #      处置 ∈ {token化, icons.json, assets, 无}；「无」必须写理由；「图标」必须为 icons.json；
 #      「位图素材」∈ {assets, 无}；任何处置=assets 的类须 assets/assets.md 存在、assets/ 有文件、清单无未处置条目
 #   3. tokens 文件恰好 1 个（css/scss/json）
+#   3b. assets.md 用途页面列值域（仅已导出条目强制，消费方为实现 AI）：每值 ∈ {p-<两位序号>, 通用}，
+#       多值逗号/顿号分隔，禁止登记画布名（宪法第九节第 10 条）
 #   4. icons/icons.json 存在且为合法 JSON（HTML 与设计稿路线均必须产出）
 #   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case（宪法第九节第 10 条）；
 #      每页含 source_anchor 视觉输入锚点
@@ -24,7 +26,13 @@
 #      采集判据见 ui-spec-guide 生成管线步 2 导航结构采集，宪法第九节第 12 条——缺失或枚举外值即拦）
 #      与「## 文案清单」段（静态结构文案封闭清单 + 动态数据区选择器，文案覆盖率断言数据源，
 #      见 ui-spec-guide 第三节第 7 条——缺段即拦）
-#      source_node_count 必须等于量化表与覆盖账本行数；两表首列定位符集合相同且唯一，登记 source=N spec=N uncovered=0
+#      source_node_count 必须等于量化表与覆盖账本行数；两表首列定位符集合相同且唯一，登记 source=N spec=N uncovered=0；
+#      6c–6g 量化表字段级有效性（判据见 ui-spec-guide「厚规格完整性门槛」）：
+#        6c 量化表含「素材/资产引用」「文案/字体排版」必备列（最小封闭列集）
+#        6d TEXT 行文案位非「—」/空（设计稿路线取 Figma characters 字段机械提取）
+#        6e 矢量/位图行素材列 ∈ {assets/<文件>, icons/<icon-xxx>, 代码复刻, 豁免, 人工补录} 且引用文件/条目实际存在
+#        6f 覆盖账本矢量/位图条目「分类/处理方式」∈ 封闭处置态（图标位/导出资产/代码复刻/豁免/人工补录）
+#        6g 量化表有 TEXT 行则文案清单静态区非空（空清单将使文案覆盖率断言全 FAIL）
 #   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
 #      icons.json 的 svg 字段指向，文件必须实际存在
 #   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
@@ -116,6 +124,55 @@ for cat in "${CATEGORIES[@]}"; do
   fi
 done
 
+# ── 3b) assets.md 用途页面列值域（宪法第九节第 10 条；仅已导出条目强制——消费方为实现 AI，豁免/人工补录条目的消费方是人，不校验）──
+if [ -f "${DIR}/assets/assets.md" ]; then
+  usage_bad=""
+  if ! usage_bad="$(python3 - "$DIR" <<'PYEOF'
+import re, sys, os
+d = sys.argv[1]
+usage_i = dispose_i = -1
+header_seen = False
+bad = set()
+for line in open(os.path.join(d, 'assets', 'assets.md'), encoding='utf-8'):
+    s = line.strip()
+    if not s.startswith('|'):
+        if header_seen:
+            break  # 表头后仅收集连续表格行，防误吞后续无关表
+        continue
+    tmp = s.replace('\\|', '\x00')
+    cells = [c.replace('\x00', ' ').strip() for c in tmp.strip('|').split('|')]
+    if all(re.fullmatch(r'[-: ]*', c) for c in cells):
+        continue
+    if not header_seen:
+        for i, c in enumerate(cells):
+            if '用途页面' in c:
+                usage_i = i
+            if '处置' in c:
+                dispose_i = i
+        if usage_i >= 0:
+            header_seen = True
+        continue
+    if dispose_i < 0 or dispose_i >= len(cells) or cells[dispose_i] != '已导出':
+        continue
+    if usage_i >= len(cells):
+        continue
+    for part in (x.strip() for x in re.split(r'[,，、;；]', cells[usage_i])):
+        if not part:
+            continue
+        if part == '通用' or re.fullmatch(r'[pP]-\d{2}', part):
+            continue
+        bad.add(part)
+        break
+if bad:
+    print(' '.join(sorted(bad)))
+PYEOF
+)"; then
+    fail "assets.md 用途页面列校验器执行异常（fail-closed）"
+    usage_bad=""
+  fi
+  [ -z "${usage_bad}" ] || fail "assets.md 用途页面列值域非法: ${usage_bad}（值域 = 页面编号 p-xx（多值逗号/顿号分隔）或「通用」；禁止登记 Figma 画布名，宪法第九节第 10 条）"
+fi
+
 # ── 9a) 定稿清零门禁：assets.md 人工补录挂起条目（宪法第九节第 11 条）──
 # 独立于类别登记的处置值检查——字体族等登记 token化 而素材挂在孤立 assets.md 时同样必须清零，防登记口径掩盖挂起
 if [ -n "${REQUIRE_FINAL}" ] && [ -f "${DIR}/assets/assets.md" ]; then
@@ -163,6 +220,129 @@ for p in "${pages[@]}"; do
         fail "${base} digest=quantified 但缺「## 节点样式量化表」段落（逐节点量化载体，见 ui-spec-guide）——按清单级处理，补量化后再标 quantified"
       elif ! grep -q '^## 布局语义表' "${p}"; then
         fail "${base} digest=quantified 但缺「## 布局语义表」段落（布局方向/对齐/auto 行高/字间距/截断，guide「布局语义必须入表」（量化表定义）；纯坐标堆叠不构成 quantified）"
+      fi
+      # ── 6c–6g) 量化表字段级有效性（判据见 ui-spec-guide「厚规格完整性门槛」）──
+      if [ "${digest}" = "quantified" ] && grep -q '^## 节点样式量化表' "${p}"; then
+        field_problems=""
+        if ! field_problems="$(python3 - "$p" "$DIR" <<'PYEOF'
+import re, sys, os, json
+
+path, pack = sys.argv[1], sys.argv[2]
+base = os.path.basename(path)
+problems = []
+text = open(path, encoding='utf-8').read()
+
+def section(t, title):
+    m = re.search(r'^## ' + re.escape(title) + r'[^\n]*\n(.*?)(?=^## |\Z)', t, re.M | re.S)
+    return m.group(1) if m else ''
+
+def parse_table(sec):
+    rows = []
+    for line in sec.splitlines():
+        s = line.strip()
+        if not s.startswith('|'):
+            continue
+        tmp = s.replace('\\|', '\x00')
+        rows.append([c.replace('\x00', '\\|').strip() for c in tmp.strip('|').split('|')])
+    return [r for r in rows if not all(re.fullmatch(r'[-: ]*', c) for c in r)]
+
+quant = parse_table(section(text, '节点样式量化表'))
+if not quant:
+    sys.exit(0)
+header, data = quant[0], quant[1:]
+
+def col(*keys):
+    for i, h in enumerate(header):
+        if any(k in h for k in keys):
+            return i
+    return -1
+
+type_i = col('类型', '分类')
+text_i = col('文案')
+asset_i = col('素材')
+role_i = col('角色')
+
+if asset_i < 0:
+    problems.append(base + ' 6c 量化表缺「素材/资产引用」必备列（最小封闭列集，见 ui-spec-guide 厚规格完整性门槛）')
+if text_i < 0:
+    problems.append(base + ' 6c 量化表缺「文案/字体排版」必备列（最小封闭列集）')
+
+icon_names = set()
+ij = os.path.join(pack, 'icons', 'icons.json')
+if os.path.exists(ij):
+    try:
+        icon_names = {i.get('name', '') for i in json.load(open(ij, encoding='utf-8')).get('icons', [])}
+    except Exception:
+        pass
+
+def row_type(row):
+    parts = []
+    for i in (type_i, role_i):
+        if 0 <= i < len(row):
+            parts.append(row[i])
+    return ' '.join(parts)
+
+def is_material(row):
+    return bool(re.search(r'IMAGE-SVG|IMAGE填充|矢量|位图', row_type(row)))
+
+def is_text_row(row):
+    return type_i >= 0 and type_i < len(row) and row[type_i].strip().startswith('TEXT')
+
+has_text = False
+for n, row in enumerate(data, start=2):
+    if is_text_row(row):
+        has_text = True
+        if text_i >= 0 and text_i < len(row):
+            first = row[text_i].split('\\|')[0].strip()
+            if first in ('—', '-', '–', '——', ''):
+                problems.append(base + ' 6d 量化表第' + str(n) + '行 TEXT 节点文案位为空/「—」（设计稿路线取 Figma characters 字段机械提取，禁止留空）')
+    if asset_i >= 0 and is_material(row) and asset_i < len(row):
+        v = row[asset_i].strip()
+        if v in ('—', '-', ''):
+            problems.append(base + ' 6e 量化表第' + str(n) + '行 矢量/位图节点素材列为空（值域: assets/<文件>/icons/<icon-xxx>/代码复刻/豁免/人工补录）')
+        elif not (v == '代码复刻' or v.startswith('豁免') or v.startswith('人工补录')
+                  or re.match(r'^(assets|icons)/[A-Za-z0-9._-]+$', v)):
+            problems.append(base + ' 6e 量化表第' + str(n) + '行 素材列值非法: ' + v + '（值域: assets/<文件>/icons/<icon-xxx>/代码复刻/豁免/人工补录）')
+        elif v.startswith('assets/') and not (os.path.exists(os.path.join(pack, v)) or os.path.exists(os.path.join(pack, v + '.png'))):
+            problems.append(base + ' 6e 量化表第' + str(n) + '行 素材引用文件不存在: ' + v)
+        elif v.startswith('icons/'):
+            stem = os.path.basename(v)
+            if not os.path.exists(os.path.join(pack, v)) and stem not in icon_names:
+                problems.append(base + ' 6e 量化表第' + str(n) + '行 图标引用不存在（文件与 icons.json 条目均未命中）: ' + v)
+
+cov = parse_table(section(text, '源节点覆盖对账'))
+if len(cov) > 1:
+    ci = -1
+    for i, h in enumerate(cov[0]):
+        if '分类' in h or '处理' in h:
+            ci = i
+            break
+    if ci >= 0:
+        for n, row in enumerate(cov[1:], start=2):
+            if ci < len(row) and re.search(r'IMAGE-SVG|IMAGE填充|矢量|位图', row[ci]) \
+               and not re.search(r'图标位|导出资产|代码复刻|豁免|人工补录', row[ci]):
+                problems.append(base + ' 6f 覆盖账本第' + str(n) + '行 矢量/位图条目「分类/处理方式」非封闭处置态（图标位/导出资产/代码复刻/豁免/人工补录）: ' + row[ci])
+
+if has_text:
+    copysec = section(text, '文案清单')
+    static = copysec.split('动态数据区')[0]
+    entries = re.findall(r'^[-*]\s+\S', static, re.M)
+    tbl = [l for l in static.splitlines() if l.strip().startswith('|')]
+    if '（无静态文案）' in static or (not entries and not tbl):
+        problems.append(base + ' 6g 量化表存在 TEXT 行但文案清单静态区为空（设计稿路线 = TEXT 节点 characters 封闭清单；空清单将使文案覆盖率断言全 FAIL，禁止以「无静态文案」搪塞）')
+
+for p_ in problems:
+    print(p_)
+PYEOF
+)"; then
+          fail "${base} 6c–6g 页面字段校验器执行异常（fail-closed）"
+          field_problems=""
+        fi
+        if [ -n "${field_problems}" ]; then
+          while IFS= read -r _prob; do
+            [ -n "${_prob}" ] && fail "${_prob}"
+          done <<< "${field_problems}"
+        fi
       fi
       # ── 6b) entry 到达方式与文案清单段（实现就绪必要条件，随 digest 门槛按页校验；宪法第九节第 12 条）──
       entry="$(awk 'NR==1&&/^---[[:space:]]*\r?$/{fm=1;next} fm&&/^---[[:space:]]*\r?$/{exit} fm&&/^entry:/{sub(/^entry:[[:space:]]*/,"");gsub(/\r$/,"");print;exit}' "${p}")"
