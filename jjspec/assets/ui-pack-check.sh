@@ -21,7 +21,8 @@
 #       source-manifest.json 存在且结构合法——figma: source_type/file_key/version/generated_at/
 #       pages[{page,node_id,last_modified}]；html: files[{path,hash}]（生命周期条款：真源演进对账锚）
 #   4. icons/icons.json 存在且为合法 JSON（HTML 与设计稿路线均必须产出）
-#   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case（宪法第九节第 10 条）；
+#   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case 且为页面语义英文概括
+#      （惰性短名拦截：容器词+序号 frame-N/page-N/view-N、p- 编号段转抄、纯数字均不构成短名，宪法第九节第 10 条）；
 #      每页含 source_anchor 视觉输入锚点
 #   6. （启用 --require-digest 时）指定页面的 frontmatter 含 digest: quantified，
 #      且页面含「## 节点样式量化表」与「## 布局语义表」两段（quantified 的强制载体，缺段按清单级拦截）；
@@ -228,6 +229,15 @@ for p in "${pages[@]}"; do
   if ! printf '%s' "${base}" | grep -qE '^p-[0-9]{2}-[a-z0-9][a-z0-9-]*\.md$'; then
     fail "页面短名须英文 kebab-case（p-<两位序号>-<英文短名>.md，宪法第九节第 10 条）: ${base}"
   fi
+  # 惰性短名拦截（宪法第九节第 10 条：短名须为页面语义英文概括——容器词+序号/p-编号转抄/纯数字不构成短名；
+  # 语义+变体号合法：customer-service-1 → 去尾部变体号后 core=customer-service 不在容器词封闭集）
+  short="$(printf '%s' "${base}" | sed -E 's/^p-[0-9]{2}-//; s/\.md$//')"
+  short_core="$(printf '%s' "${short}" | sed -E 's/-?[0-9]+$//')"
+  case "${short_core}" in
+    ""|frame|page|view|screen|tab|panel|item|node|component|container|p)
+      fail "页面短名须为页面语义英文概括（惰性短名「容器词+序号 / p-编号转抄 / 纯数字」不构成短名，宪法第九节第 10 条）: ${base}"
+      ;;
+  esac
   grep -q 'source_anchor' "${p}" || fail "${base} 缺 source_anchor 视觉输入锚点"
 
   # ── 6) 页面消化门槛（仅 --require-digest 启用时）──
