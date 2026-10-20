@@ -149,6 +149,8 @@ for p in "${pages[@]}"; do
   if [ -n "${REQUIRE_DIGEST}" ]; then
     page_no="$(printf '%s' "${n}")"
     need_check=1
+    # 裁撤页（status: withdrawn）跳过消化门槛：设计收敛/源帧删除的占位页，保留编号连续性但不作为实现输入
+    grep -q '^status:[[:space:]]*withdrawn' "${p}" && need_check=0
     if [ "${REQUIRE_DIGEST}" != "all" ]; then
       want_no="$(printf '%s' "${REQUIRE_DIGEST}" | sed -E 's/^p-0*([0-9]+)/\1/')"
       [ "${page_no}" = "${want_no}" ] || need_check=0

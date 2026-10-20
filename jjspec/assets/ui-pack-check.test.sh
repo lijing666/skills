@@ -212,6 +212,12 @@ mk_pack "${WORK}/c21"
 printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\nentry: menu\n---\n# 登录\n\n## 节点样式量化表\n\n| a |\n|---|\n| b |\n\n## 文案清单\n\n| 文案 | 类型 |\n|---|---|\n| 登录 | 标题 |\n' > "${WORK}/c21/pages/p-01-login.md"
 expect "quantified 缺布局语义表拦截" 1 "布局语义表" "${WORK}/c21" "--require-digest"
 
+# 场景28：status: withdrawn 裁撤占位页（digest: list-level、无量化表）+ --require-digest → 放行（设计收敛占位页跳过消化门槛，保留编号连续性）
+mk_pack "${WORK}/c23"
+rm -f "${WORK}/c23/pages/p-02-list.md"
+printf -- '---\ntitle: 登录变体\nsource_anchor: figma 1:2\ndigest: list-level\nentry: internal-entry\nstatus: withdrawn\n---\n# 登录变体（已裁撤）\n\n设计收敛，源帧删除，本页裁撤占位。\n' > "${WORK}/c23/pages/p-01-login.md"
+expect "裁撤页跳过消化门槛放行" 0 "UI-PACK PASS" "${WORK}/c23" --require-digest
+
 # ── 定稿清零门禁（--require-final，宪法第九节第 11 条）──
 
 # 场景25：assets.md 人工补录挂起条目 + --require-final → 拦截（挂起态非终态；复用场景23 的 c20 包）
