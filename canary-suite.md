@@ -1,15 +1,15 @@
 ---
 title: 技能金丝雀测试案例集（canary-suite）
 type: canary-suite
-version: v1.3
-date: 2026-10-19
+version: v1.4
+date: 2026-10-20
 maintainer: 李晶
-applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定基线 v1.0.0）· jjspec skill（判定基线 v1.8.1，分册机制）
+applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定基线 v1.0.0）· jjspec skill（判定基线 v1.8.1 分册机制 · v1.11.0 UI 规范管线与生命周期）
 ---
 
 # 技能金丝雀测试案例集
 
-> 体系是概率组件：技能的重大变更会静默漂移——规则措辞、触发结构、宿主或模型的改动都可能让"以前判对"的场景判错。本案例集按技能固化最小可复现场景（jjfullstack 6 例 · jjagent 5 例 · jjspec 2 例），重大变更前后必须真实跑一遍，量化漂移后再放量（理念同 jjspec `references/evaluation.md` 的金丝雀任务集）。
+> 体系是概率组件：技能的重大变更会静默漂移——规则措辞、触发结构、宿主或模型的改动都可能让"以前判对"的场景判错。本案例集按技能固化最小可复现场景（jjfullstack 6 例 · jjagent 5 例 · jjspec 3 例），重大变更前后必须真实跑一遍，量化漂移后再放量（理念同 jjspec `references/evaluation.md` 的金丝雀任务集）。
 
 ## 1. 触发时机（必跑）
 
@@ -26,7 +26,7 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 
 1. 逐场景以对应技能的**模式 A（架构设计）真实执行**（体检场景走模式 B）——输入 §3 的需求卡，真实产出 HLD（含对应技能标注的注入章节与执行留痕），禁止用推演回放或记忆结论替代；jjspec 场景的执行方式特例见 §3.3（产出分册 PRD 而非 HLD）
 2. 留痕硬要求：产出须附程序执行留痕（端数判定输入、所走程序名、评分表或判据链；jjspec 场景为三重校验原始对账清单）——无留痕 = 标称失准 = 未执行
-3. 产出后按 §4 对应技能的判定判据逐条比对；全绿才算通过（jjfullstack 8 条 / jjagent 6 条 / jjspec 6 条）
+3. 产出后按 §4 对应技能的判定判据逐条比对；全绿才算通过（jjfullstack 8 条 / jjagent 6 条 / jjspec 11 条）
 4. 跑完在 §6 执行记录表登记一行
 
 ## 3. 场景集
@@ -141,9 +141,9 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 
 验证点：五态判定准确、✅ 必须附证据、不适用必须附理由、优化建议按风险与成本排序。
 
-### 3.3 jjspec（2 例，PRD 分册机制）
+### 3.3 jjspec（3 例，PRD 分册 + UI 规范管线）
 
-执行方式特例：按 `prd-splitting.md` 入口 A / 入口 B 真实执行于临时目录（/tmp），产出真实分册文件与校验留痕，不停留在推演。
+执行方式特例：S1/S2 按 `prd-splitting.md` 入口 A / 入口 B 真实执行于临时目录（/tmp），产出真实分册文件与校验留痕，不停留在推演；S3 按 SKILL.md「生成 UI 规范」指令路径模式 A 真实执行（构造 HTML 原型作真源，⚠️ 构造）。
 
 ### CANARY-S1 多模块新需求分册起稿（入口 A）
 
@@ -160,6 +160,14 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 **预期**：迁移映射表先行；prd.md 主（全局章节机械搬入 + R12 来源沿革行）+ prd-01-ticket.md（REQ-090-001/002 + UC-001/002 + 3.4 回池场景）+ prd-02-sla.md（REQ-090-003 + UC-003）；编号全保号（R6）、需求正文逐字符一致（R7，diff 为空）、REQ/Scenario/附D 计数守恒（R8）。
 
 验证点：R7 机械搬运非凭记忆复述、R8 三组计数对账、R11 缺陷显式登记、查当前行为倒查 INDEX 路径存在。
+
+### CANARY-S3 UI 规范管线两轮演进（HTML 原型路线）
+
+需求输入：构造「极简记账 H5」HTML 原型 2 页——p-01 记账首页（静态文案 ≥3 / 双色标完整渐变 / SVG 图标 ×2 / 自由曲线插画 ×1 / 纯几何按钮代码复刻）、p-02 明细页（静态文案 / 位图 ×1 / 纯色卡片 token 化）。**元素类型清单是场景稳定锚**（判据锚定元素覆盖面与执法结果，不锚定像素）。第一幕指令「生成 UI 规范」消化至定稿（digest 全量 + 定稿门禁 + manifest 3c + 置可用 v1.0）；第二幕真源演进：改 p-01（渐变换色 + 文案改动）+ 新增 p-03 统计页（新图标 ×1），走生命周期路径（对账清单 → 停靠 → 增量消化 + 扩页 → v1.1）。
+
+**预期**：v1.0 执法全绿（6c–6h 字段级无一豁免）+ manifest 就位；v1.1 对账清单三类差异逐项哈希 + 受影响页占比 + 停靠留痕，p-01 量化表整体重写（旧值零残留）、p-03 追加不重号、已消费资产条目名零变化、README 版本递增 + 变更行。
+
+验证点：生成管线字段级执法（6c–6h）、素材处置对账等式、3c manifest、生命周期对账/停靠/增量消化/条目名稳定/扩页/版本记录。
 
 ## 4. 判定判据（通过标准）
 
@@ -199,6 +207,11 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 | 4 | 迁移保真（S2）：编号保号（R6）、需求正文逐字符一致——标题层级差除外（R7，diff 为空）、REQ/Scenario/附D 三组计数守恒（R8）；S1 对应检查为 REQ 归属唯一（每条 REQ 恰在一个模块详述） |
 | 5 | 停靠纪律：全部产物 status ≠ 已定稿，变更续接标"待定稿"，AI 未自行定稿 |
 | 6 | 路由隔离：分册仅显式指令触发（〇 无自动判定）；「写需求 X」单文件话术不落入分册产物 |
+| 7 | 规范包执法全绿（S3）：`--require-digest all` 与 `--require-final` 通过，6c–6h 字段级校验无一豁免——量化表最小封闭列集齐备、TEXT 行文案位实值、素材列引用命中实际文件、账本封闭五态、渐变串括号配对完整 |
+| 8 | 真源指纹就位（S3）：source-manifest.json 在置「可用」前产出且过 3c；HTML 路线为文件内容哈希清单 |
+| 9 | 生命周期路径完整（S3）：对账清单含三类差异逐项明细与受影响页占比（原始数据非结论）；增量消化有整体重写证据（旧值零残留，非补丁）；扩页不重号；README 版本递增 + 变更行登记 |
+| 10 | 资产条目名稳定（S3）：第二轮后已消费 assets/icons 条目名与第一轮完全一致，引用零断链 |
+| 11 | 停靠纪律（S3）：对账清单交用户确认后才执行增量消化（无静默改包）；「可用」状态变更以执法全绿为前置 |
 
 通过 → 变更可放量；不通过 → 禁止放量，回滚变更或修复后重跑直至全绿。
 
@@ -207,6 +220,8 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 - **jjagent 执法脚本未建**：可机检面窄（硬编码密钥、内存限流 × 多 worker、密钥直比等少数 grep 项），按 R-AG02 挂期权——真实体检暴露高频违规后再建，不预先空转。
 
 - **形态基线表无"单平台小程序"行**：CANARY-3 走退化程序时无可取基线默认值，按"判据优先级链走到底 → 取官方工程规范默认 + 落 TDR（含投降条件）"处理视为通过。若后续给基线表补该行，同步更新本条与 CANARY-3 预期描述。
+
+- **CANARY-S3 未覆盖 Figma 设计稿路线**：S3 走 HTML 路线；characters 机械提取、node id 锚点、nodes 端点 lastModified 读取等 Figma 特有面未被场景触达——待真实 Figma 案例积累后补 S4 或替换（yzz-miniprogram 项目 v0.1.1 修复过程已具场景素材价值）。另：S3 首跑暴露 4 类格式走样——缺口 1–3（README 资产类别登记的精确节名/15 类行名/逐类处置约束、icons.json svg 字段为相对 icons/ 目录文件名、tokens 文件包内恰好 1 个 + json 双引号串触发字体误报）已由 jjspec v1.11.1 在 ui-spec-guide 补显式定义消解；第 4 类（source_anchor/统计行格式）经复核 guide 原文已有，属长段落埋没漏读——v1.11.1 同步将页面 frontmatter 必填字段改为集中登记（防再犯）。
 
 ## 6. 执行记录
 
@@ -221,3 +236,4 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 | 2026-10-16 | jjfullstack v2.3.0 + jjagent v1.0.0 + jjspec v1.8.1 | UI 真源绑定机制入库（宪法第九节 / ui-spec-guide / prd-template 第 8 章 / spec+taskcard 承接位 / gates 视觉回归）+ 对读单源收敛（视觉组分支指针 9.4→9.9、采集条件/理由段/Token 判据归一）首提交前必跑；全量 12 例重跑（C1~C5 / J1~J5 / S1~S2） | 12/12 通过 | §4.1 七判据 / §4.2 六判据 / §4.3 六判据全绿；jjspec 场景仅覆盖分册路径，UI 管线场景 S3 待建（UI 增量靠人工对读审查放行）；发现 R-AG25 前提与违反信号边界张力（单租户预建 tenant_id 判 ➖，执法点经优化建议保留，待维护澄清）；留痕 /tmp/canary-full-20261016/（jjfullstack 5 HLD、jjagent 4 HLD + J5 体检报告 + 样例仓库、jjspec 分册产物 + verification.txt；J4/J5 为 ⚠️ 构造） |
 | 2026-10-19 | jjfullstack v2.4.0 | R-U28 新增第三层·管理后台族并仓判定（三条件：同物种/契约同源/共享诉求 ≥ 2 类）+ 违反信号精确化（多大项并仓须过族判定）+ R-U30 族排除条款 + hld-injection 仓库形态枚举扩展 + SKILL.md 模式 A 措辞同步；CANARY-6 建册首跑 + C1/C2/C5 回归（§1 规则语义修订必跑；canary-suite v1.3，判定判据增至 §4.1 八条） | 4/4 通过 | §4.1 八判据全绿（C2 判据 7 按最小注入纪律不适用）；C6 族三条件逐项留痕（API client + 自建设计系统 + 统一错误结构 = 3 类共享）；反向验证全过——C1/C2 单大项不误入族判定、C5 端型大项间并仓仍被拦截；留痕 /tmp/canary-jjfullstack-20261019/（C1/C2/C5/C6 四份 HLD + verification.md） |
 | 2026-10-19 | jjfullstack v2.4.0 | 同日补充：R-U12 增 API 路径按资源域组织纪律（同一资源不因消费方不同复制多套路径，差异出口 = 权限点 + R-U14⑧ 响应过滤 / BFF R-U16）+ R-U28 族条款增 api-client 单包按域分模块纪律（禁按台拆多包）；C6 全量重跑 + C1 回归（R-U28 条件变更必跑；C1/C6 验证点同步补 R-U12 射程） | 2/2 通过 | §4.1 八判据全绿；新纪律 C6 正向落位（接口设计节路径留痕 + 单包留痕）、C1 多消费方（三大项共用后端）射程无冲突；C1 4 仓结论零漂移；留痕 /tmp/canary-jjfullstack-20261019/（C1/C6 HLD + verification.md，覆盖上轮同名文件） |
+| 2026-10-20 | jjspec v1.9.0→v1.11.0 | UI 管线三连改放量前必跑：量化表字段级执法 6c–6h + assets.md 值域 3b + 渐变完整性 6h + 规范包生命周期条款（3c 指纹/对账/增量消化/扩页/新版本包/版本记录）；CANARY-S3 建册首跑（canary-suite v1.4，判定判据增至 §4.3 十一条） | S3 通过（判据 7–11 全绿 5/5） | 两幕执法 `--require-digest all` + `--require-final` 均 PASS；v1.1 增量消化旧值零残留、资产条目名零变化、对账三类差异 + 停靠留痕齐全；首跑 23 项 FAIL 均为格式性走样，归因 4 类可理解性缺口登记 §5（README 15 类类名/icons svg 相对路径/tokens 单文件 + json 字体误报交互/source_anchor 与统计行格式），待 ui-spec-guide 补显式定义；留痕 /tmp/canary-jjspec-s3/（规范包 v1.0→v1.1 + verification.md + reconciliation-r2.md/r2.json；真源为 ⚠️ 构造） |
