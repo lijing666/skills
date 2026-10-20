@@ -6,6 +6,7 @@
 #       页面跳号 / 页面缺锚点 / 缺 tokens / 非法 JSON / 引用素材不出清单 /
 #       icons.json svg 指向缺失 / 品牌字体缺字体文件条目 / 品牌字体有字体条目放行 /
 #       6c 素材与文案必备列 / 6d TEXT 文案位 / 6e 矢量素材引用 / 6f 账本处置态 / 6g 文案清单非空 / 6h 渐变完整性 /
+#       3c 真源指纹清单（--require-final 或 状态=可用）/
 #       3b assets.md 用途页面值域（画布名拦截 / p-xx·通用·豁免·人工补录放行）
 set -euo pipefail
 
@@ -68,6 +69,7 @@ prepare_digest_fixture() { # add source scan ledger to otherwise-valid quantifie
 mk_pack() { # mk_pack <目标目录> —— 构造最小合规包
   local d="$1"
   mkdir -p "${d}/pages" "${d}/icons"
+  printf '{"source_type":"figma","file_key":"test-key","version":"1","generated_at":"2026-10-20","pages":[{"page":"p-01","node_id":"1:2","last_modified":"2026-10-19T00:00:00Z"},{"page":"p-02","node_id":"1:3","last_modified":"2026-10-19T00:00:00Z"}]}' > "${d}/source-manifest.json"
   cat > "${d}/README.md" <<'EOF'
 ---
 title: 测试规范
@@ -418,5 +420,22 @@ printf 'x' > "${WORK}/c42/assets/bg.png"
 printf 'x' > "${WORK}/c42/assets/icon-set.png"
 printf '# 素材清单\n| 文件 | 类别 | 来源锚点 | 用途页面 | 处置 |\n|---|---|---|---|---|\n| bg.png | 背景 | figma 1:2 | p-01、p-02 | 已导出 |\n| icon-set.png | 装饰 | figma 1:3 | 通用 | 已导出 |\n| — | 字体-X | 设计稿字体引用 | 通用 | 人工补录 |\n| — | 展板物料 | 画布外 | 效果图 | 豁免 |\n' > "${WORK}/c42/assets/assets.md"
 expect "3b：p-xx/通用/豁免/人工补录放行" 0 "UI-PACK PASS" "${WORK}/c42"
+
+# ── 真源指纹清单（3c，生命周期条款）──
+# 场景51：--require-final 且缺 source-manifest.json → 拦截（真源指纹是置「可用」前置）
+mk_pack "${WORK}/c44"
+rm "${WORK}/c44/source-manifest.json"
+expect "3c：--require-final 缺指纹清单拦截" 1 "缺 source-manifest.json" "${WORK}/c44" --require-final
+
+# 场景52：README 状态=可用 且 manifest 结构非法（figma 缺 pages）→ 默认模式拦截
+mk_pack "${WORK}/c45"
+printf '\n状态：可用\n' >> "${WORK}/c45/README.md"
+printf '{"source_type":"figma","file_key":"k","version":"1","generated_at":"2026-10-20"}' > "${WORK}/c45/source-manifest.json"
+expect "3c：可用包指纹结构非法拦截" 1 "source-manifest.json 结构非法" "${WORK}/c45"
+
+# 场景53：README 状态=可用 + 合法 manifest → 默认模式放行（对账锚就位）
+mk_pack "${WORK}/c46"
+printf '\n状态：可用\n' >> "${WORK}/c46/README.md"
+expect "3c：可用包合法指纹放行" 0 "UI-PACK PASS" "${WORK}/c46"
 
 [ "${FAILED}" -eq 0 ] && echo "ALL PASS" || exit 1
