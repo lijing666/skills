@@ -69,7 +69,7 @@ prepare_digest_fixture() { # add source scan ledger to otherwise-valid quantifie
 mk_pack() { # mk_pack <目标目录> —— 构造最小合规包
   local d="$1"
   mkdir -p "${d}/pages" "${d}/icons"
-  printf '{"source_type":"figma","file_key":"test-key","version":"1","generated_at":"2026-10-20","pages":[{"page":"p-01","node_id":"1:2","last_modified":"2026-10-19T00:00:00Z"},{"page":"p-02","node_id":"1:3","last_modified":"2026-10-19T00:00:00Z"}]}' > "${d}/source-manifest.json"
+  printf '{"source_type":"figma","file_key":"test-key","generated_at":"2026-10-20","normalization":"剔除 id 时变字段","overall_hash":"sha256:abc","pages":[{"page":"p-01","node_id":"1:2","content_hash":"sha256:h1"},{"page":"p-02","node_id":"1:3","content_hash":"sha256:h2"}]}' > "${d}/source-manifest.json"
   cat > "${d}/README.md" <<'EOF'
 ---
 title: 测试规范
@@ -447,11 +447,11 @@ mk_pack "${WORK}/c44"
 rm "${WORK}/c44/source-manifest.json"
 expect "3c：--require-final 缺指纹清单拦截" 1 "缺 source-manifest.json" "${WORK}/c44" --require-final
 
-# 场景52：README 状态=可用 且 manifest 结构非法（figma 缺 pages）→ 默认模式拦截
+# 场景52：README 状态=可用 且 manifest 为旧 API 元数据形态（version/无内容指纹）→ 默认模式拦截
 mk_pack "${WORK}/c45"
 printf '\n状态：可用\n' >> "${WORK}/c45/README.md"
-printf '{"source_type":"figma","file_key":"k","version":"1","generated_at":"2026-10-20"}' > "${WORK}/c45/source-manifest.json"
-expect "3c：可用包指纹结构非法拦截" 1 "source-manifest.json 结构非法" "${WORK}/c45"
+printf '{"source_type":"figma","file_key":"k","version":"1","generated_at":"2026-10-20","pages":[{"page":"p-01","node_id":"1:2","last_modified":"2026-10-19T00:00:00Z"}]}' > "${WORK}/c45/source-manifest.json"
+expect "3c：旧 API 元数据形态（缺内容指纹）拦截" 1 "source-manifest.json 结构非法" "${WORK}/c45"
 
 # 场景53：README 状态=可用 + 合法 manifest → 默认模式放行（对账锚就位）
 mk_pack "${WORK}/c46"
