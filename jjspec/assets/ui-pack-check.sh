@@ -18,8 +18,9 @@
 #   3b. assets.md 用途页面列值域（仅已导出条目强制，消费方为实现 AI）：每值 ∈ {p-<两位序号>, 通用}，
 #       多值逗号/顿号分隔，禁止登记画布名（宪法第九节第 10 条）
 #   3c. 真源指纹清单（--require-final 或 README 状态=可用 时强制，draft 生成期不强制）：
-#       source-manifest.json 存在且结构合法——figma: source_type/file_key/version/generated_at/
-#       pages[{page,node_id,last_modified}]；html: files[{path,hash}]（生命周期条款：真源演进对账锚）
+#       source-manifest.json 存在且结构合法——figma: source_type/file_key/generated_at/normalization/
+#       overall_hash/pages[{page,node_id,content_hash}]（内容指纹——工具无关，桥 dump 哈希即可产，
+#       不依赖 Figma REST API 元数据）；html: files[{path,hash}]（生命周期条款：真源演进对账锚）
 #   4. icons/icons.json 存在且为合法 JSON（HTML 与设计稿路线均必须产出）
 #   5. pages/p-<两位序号>-<短名>.md 存在：编号自 01 连续、无重号；短名须英文 kebab-case 且为页面语义英文概括
 #      （惰性短名拦截：容器词+序号 frame-N/page-N/view-N、p- 编号段转抄、纯数字均不构成短名，宪法第九节第 10 条）；
@@ -182,15 +183,15 @@ fi
 _sm_status="$(grep -oE '状态[:：][[:space:]]*(draft|可用|归档)' "${DIR}/README.md" 2>/dev/null | head -1 | grep -oE '(draft|可用|归档)$' || true)"
 if [ -n "${REQUIRE_FINAL}" ] || [ "${_sm_status}" = "可用" ]; then
   if [ ! -f "${DIR}/source-manifest.json" ]; then
-    fail "缺 source-manifest.json（真源指纹清单——Figma 路线记 file key/version/逐页 node lastModified，HTML 路线记文件内容哈希；生命周期条款：确认置「可用」前必须产出，存量可用包须补产）"
+    fail "缺 source-manifest.json（真源指纹清单——Figma 路线记 file_key/normalization/overall_hash/逐页 node_id+content_hash（内容指纹，桥 dump 哈希即可产），HTML 路线记文件内容哈希；生命周期条款：确认置「可用」前必须产出，存量可用包须补产）"
   elif ! python3 - "${DIR}" <<'PYEOF'
 import json, os, sys
 try:
     m = json.load(open(os.path.join(sys.argv[1], 'source-manifest.json'), encoding='utf-8'))
     assert isinstance(m, dict) and m.get('source_type') in ('figma', 'html') and m.get('generated_at')
     if m['source_type'] == 'figma':
-        assert m.get('file_key') and m.get('version') and isinstance(m.get('pages'), list) and m['pages']
-        assert all(isinstance(p, dict) and all(k in p for k in ('page', 'node_id', 'last_modified')) for p in m['pages'])
+        assert m.get('file_key') and m.get('normalization') and m.get('overall_hash') and isinstance(m.get('pages'), list) and m['pages']
+        assert all(isinstance(p, dict) and all(k in p for k in ('page', 'node_id', 'content_hash')) for p in m['pages'])
     else:
         assert isinstance(m.get('files'), list) and m['files']
         assert all(isinstance(f, dict) and 'path' in f and 'hash' in f for f in m['files'])
@@ -198,7 +199,7 @@ except Exception:
     sys.exit(1)
 PYEOF
   then
-    fail "source-manifest.json 结构非法（fail-closed）——figma: source_type/file_key/version/generated_at/pages[{page,node_id,last_modified}]；html: source_type/generated_at/files[{path,hash}]"
+    fail "source-manifest.json 结构非法（fail-closed）——figma: source_type/file_key/generated_at/normalization/overall_hash/pages[{page,node_id,content_hash}]（内容指纹）；html: source_type/generated_at/files[{path,hash}]"
   fi
 fi
 
