@@ -184,6 +184,26 @@ mk_pack "${WORK}/c15"
 mv "${WORK}/c15/pages/p-01-login.md" "${WORK}/c15/pages/p-01-登录.md"
 expect "中文短名拦截" 1 "英文 kebab-case" "${WORK}/c15"
 
+# 场景18b：惰性短名拦截——容器词+序号（frame-N 不构成短名，宪法第九节第 10 条）
+mk_pack "${WORK}/c15b"
+mv "${WORK}/c15b/pages/p-01-login.md" "${WORK}/c15b/pages/p-01-frame-5.md"
+expect "惰性短名拦截：frame-N" 1 "语义英文概括" "${WORK}/c15b"
+
+# 场景18c：惰性短名拦截——p- 编号段转抄（p-01-p-00 形态第二段）
+mk_pack "${WORK}/c15c"
+mv "${WORK}/c15c/pages/p-01-login.md" "${WORK}/c15c/pages/p-01-p-00.md"
+expect "惰性短名拦截：p-编号转抄" 1 "语义英文概括" "${WORK}/c15c"
+
+# 场景18d：惰性短名拦截——纯数字短名
+mk_pack "${WORK}/c15d"
+mv "${WORK}/c15d/pages/p-01-login.md" "${WORK}/c15d/pages/p-01-2.md"
+expect "惰性短名拦截：纯数字" 1 "语义英文概括" "${WORK}/c15d"
+
+# 场景18e：语义+变体号短名放行（customer-service-1 形态合法，宪法第九节第 10 条）
+mk_pack "${WORK}/c15e"
+mv "${WORK}/c15e/pages/p-01-login.md" "${WORK}/c15e/pages/p-01-customer-service-1.md"
+expect "语义+变体号短名放行" 0 "UI-PACK PASS" "${WORK}/c15e"
+
 # 场景19：quantified 缺「节点样式量化表」段落拦截（单页模式）
 mk_pack "${WORK}/c16"
 printf -- '---\ntitle: 登录\nsource_anchor: figma 1:2\ndigest: quantified\n---\n# 登录\n\n- 主用色：#000000(×19)\n' > "${WORK}/c16/pages/p-01-login.md"
