@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.13.0
+  version: 1.14.0
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -34,7 +34,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | 写需求 X / 打磨需求 X / 只写 prd X | ①只读预检 → ③产出 `changes/<需求ID>/prd.md`（status: draft→评审中）；②规则缺口只记建议，待澄清问题集中在附 D，**停在定稿前**——定稿只能由用户指令触发 |
 | 多模块需求 X / 分册需求 X / 拆分需求 X | 按 `references/prd-splitting.md` 以「主 prd.md + prd-<序号>-<模块>.md」分册起稿（新需求）或迁移拆分（存量整稿）；①②③照常但产物为分册，校验按 `references/prd-splitting.md` 由 AI 自行执行全绿后停在定稿前；④起 Spec、⑤HLD、⑥任务卡及后续步骤不变（spec/hld 仍单文件）。仅显式指令触发，不做自动判定 |
 | 定稿 X / PRD 定稿（仅用户可发） | PRD status 置"已定稿" + 版本表登记，停在开工前；用户同句要求"定稿并开工"则直接进入下行 |
-| 按 PRD 开工 X / 开发 X | 校验 `changes/<需求ID>/prd.md` 的定稿对当前版本有效 → 复查①并落实② → 判定模式 → 直通执行④-⑨或走门停在⑤；草稿/评审中不得进入实现 |
+| 按 PRD 开工 X / 开发 X | 落点自检（宪法第八节第 3 条：复用已有需求目录、禁嵌套同名目录段、歧义停下确认）→ 校验 `changes/<需求ID>/prd.md` 的定稿对当前版本有效（正主唯一，副本上的状态/批准无效）→ 复查①并落实② → 判定模式 → 直通执行④-⑨或走门停在⑤；草稿/评审中不得进入实现 |
 | 直接开工 X | 单卡且不触线：轻量 PRD 一轮确认（复述需求 + 假设 + 澄清打包一单，用户确认即定稿）→ 落实①②后执行④-⑨；触线或超出单卡则补完整 PRD，经用户定稿后按触线清单判定直通/走门 |
 | 只写 spec X / 只写 task X | 新需求从定稿 PRD 产出到截断点（Spec=④ / 任务卡=⑥）；缺 PRD 时先补草稿待用户定稿，缺方案时先起草，走门须获批准才拆卡；仅写目标及必要前置文档，不实施规则建议、不编码 |
 | 生成 UI 规范 X（附 HTML 原型或 Figma 地址） | 加载 `references/ui-spec-guide.md` 生成管线：判定 HTML/设计稿分支 → 机械提取（含视觉物扫描）→ 前置产物四件套落 `ui-specs/<产品ID>-<业务大项>/` → 机械校验（含 ui-pack-check 资产门禁）→ 输出对账清单**停在用户确认前**（确认前 README 状态 draft）；仅文档任务，不编码 |
@@ -106,6 +106,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/menu-recon-check.sh`：菜单三源对账门禁（页面卡「## 菜单/入口对账」固定节执法，宪法第九节第 12 条）——ui-specs 中 entry 含 menu 的页面清单 ↔ 实现工程路由注册表 ↔ PRD 非目标表排除名单，自造菜单/菜单缺失/排除命中均拦（fail-closed；回归测试 `menu-recon-check.test.sh`）
 - `assets/page-excerpt-check.sh`：UI 规格摘录对账门禁（页面卡「## UI 规格摘录」节执法）——N=M 严格对账：登记 N/M 必须纯数字且与节点样式摘录条目数、ui_source_page 各页量化表实际行数三方相等，覆盖账本摘录条数须与节点样式摘录一一对应（六块齐全：缺账本块/条数错配/缩进表格式逃逸均拦），占位符未替换/规则文字占位/漏转抄/指针悬空均拦（fail-closed；单卡模式供开工前自查——不通过不得写第一行代码，`--diff` 批量供 CI 打回；回归测试 `page-excerpt-check.test.sh`）
 - `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked/review 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有「人审通过」记录、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭；fail-closed；回归测试 `task-done-gate.test.sh`）
+- `assets/doc-chain-check.sh`：文档链正主门禁（宪法第八节落点自检/正主唯一 + 批准效力正主判据的机械执法）——嵌套同名目录段（仅目录段，文件名含需求 ID 不受限）、同一需求 ID 核心文档多份（含活跃+归档双位置）、悬空批准（spec/hld approved 但正主 prd 未定稿；免 PRD 修复 Spec 无 prd.md 天然跳过）、状态自洽（approved 残留待批准 / draft 旧批准冒充 / 定稿与版本表不一致）均拦；archive 历史快照状态跳过、结构违例永久拦截；`--diff` 批量供 CI（fail-closed；回归测试 `doc-chain-check.test.sh`）
 - `assets/pixel-diff.mjs`：HTML 原型路线逐卡内联视觉验收参考实现（本地跑，非 CI 物料——ui-gate 行 `pixel-diff <差异>% ≤ <PRD阈值>% PASS（命令:node pixel-diff.mjs ...）` 的可复跑命令本体）；基准 vs 实现截图逐像素对比，缺基准/截图/env.json/尺寸不一致/超阈值均 fail-closed，热区统计与 diff 返回值强制对账，env.json 机械校验视口/DPR/UA/字体就绪；`--out` 物化差异图/叠加图/热区三联裁剪 + report.json；阈值不因调优困难放宽，环境契约对齐后按热区归因修复。
 - `assets/visual-diagnose.mjs`：HTML 路线 pixel-diff FAIL 页热区级 DOM/CSS 诊断参考实现（本地跑，非 CI 物料）——消费 pixel-diff `--out` 的 report.json，按缩放比换算热区坐标后在实现页渲染态逐热区采样 elementsFromPoint，输出命中元素链及排版、盒模型、定位、布局、裁切与视觉效果等计算样式，供 AI 与页面规格量化表对读归因；按需登记级：项目侧 `npm i -D playwright pngjs`，实现侧 env.json 必须登记。
 - `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查（extract-boundary + boundary-check）、测试对应性（ac-coverage-check）、风险区门禁与密钥扫描（gitleaks）job——均支持 PR 与 push 双基准，覆盖不可禁直推的场景
