@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.15.1
+  version: 1.15.2
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -73,6 +73,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 
 - **体系变更评估**（不绑定场景）：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 `evaluation.md` 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
 - **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词（带编号实体文件例外见 prd-constitution.md 第八节）。
+- **临时工件清洁**（适用所有场景与所有宿主工具）：自编校验/诊断/一次性脚本与中间产物一律落系统临时目录（macOS/Linux `/tmp`、Windows `%TEMP%`），禁止在仓库工作区创建任何非交付文件（非交付 = 不属于当前指令声明产物清单的文件）；优先复用 assets 现成脚本，其次单行命令（grep / awk / python -c）不落盘；每个停靠点交付前自查 `git status`，出现非交付文件先清理再停——违反后果：临时校验被后续会话当作项目事实、随交付误提交（2026-10-22 Codex 在需求 tasks/ 目录自编 check-ui-binding.py 事故的提级条款）
 - **文档/分析范围优先**：预检只读，规则缺口记入目标产物的建议，不自动修改 AGENTS.md、CI 或新增已接受 ADR；指定产物完成即止。用户明确要求修改规则/配置/lint/CI 时在授权范围内实施并验证，不自动发布。纯文档任务不要求开工授权。
 
 ## 参考文档索引（按需加载，勿一次性全读）
@@ -111,7 +112,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/pixel-diff.mjs`：HTML 原型路线逐卡内联视觉验收参考实现（本地跑，非 CI 物料——ui-gate 行 `pixel-diff <差异>% ≤ <PRD阈值>% PASS（命令:node pixel-diff.mjs ...）` 的可复跑命令本体）；基准 vs 实现截图逐像素对比，缺基准/截图/env.json/尺寸不一致/超阈值均 fail-closed，热区统计与 diff 返回值强制对账，env.json 机械校验视口/DPR/UA/字体就绪；`--out` 物化差异图/叠加图/热区三联裁剪 + report.json；阈值不因调优困难放宽，环境契约对齐后按热区归因修复。
 - `assets/visual-diagnose.mjs`：HTML 路线 pixel-diff FAIL 页热区级 DOM/CSS 诊断参考实现（本地跑，非 CI 物料）——消费 pixel-diff `--out` 的 report.json，按缩放比换算热区坐标后在实现页渲染态逐热区采样 elementsFromPoint，输出命中元素链及排版、盒模型、定位、布局、裁切与视觉效果等计算样式，供 AI 与页面规格量化表对读归因；按需登记级：项目侧 `npm i -D playwright pngjs`，实现侧 env.json 必须登记。
 - `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查（extract-boundary + boundary-check）、测试对应性（ac-coverage-check）、风险区门禁与密钥扫描（gitleaks）job——均支持 PR 与 push 双基准，覆盖不可禁直推的场景
-- **脚本执行前提与跨平台兜底**（适用以上全部 `.sh`）：正源判据只有 bash 版一份，**不内置任何其他平台版本**——①主路径：bash 环境（macOS/Linux 原生；Windows 用 Git Bash 或 WSL 执行同一脚本，零改动）；②兜底：确无 bash 可用时（如 Windows-only CI runner），AI 在会话内参考脚本头部「校验清单」注释自编等价校验（如 PowerShell）——校验清单为唯一口径不得增删项、fail-closed 语义不变（检查不了 = 不通过）、输出逐项对账明细禁只报结论、**一次性使用，禁入库禁提交**（防双源漂移与口径自由发挥）；③本地执行的脚本（ui-pack-check.sh）在头部注明该口径语义正源地位
+- **脚本执行前提与跨平台兜底**（适用以上全部 `.sh`）：正源判据只有 bash 版一份，**不内置任何其他平台版本**——①主路径：bash 环境（macOS/Linux 原生；Windows 用 Git Bash 或 WSL 执行同一脚本，零改动）；②兜底：确无 bash 可用时（如 Windows-only CI runner），AI 在会话内参考脚本头部「校验清单」注释自编等价校验（如 PowerShell）——校验清单为唯一口径不得增删项、fail-closed 语义不变（检查不了 = 不通过）、输出逐项对账明细禁只报结论、落点与一次性使用纪律以「贯穿各场景的约定 · 临时工件清洁」条为正源（防双源漂移与口径自由发挥）；③本地执行的脚本（ui-pack-check.sh）在头部注明该口径语义正源地位
 - 物料分级：以上为**开箱可用**（boundary/ac-coverage job 无需按 PR 手改路径，风险区 job 无需配置；测试布局非典型时 --test-glob 登记）；DAG 完备性校验由 task-dag-check.sh 开箱承担（不再随项目测试框架自配）；人审三焦点（含 AC↔测试断言语义对应）为人工项
 
 ## 四条设计铁律（维护本 skill 时不可违反）
