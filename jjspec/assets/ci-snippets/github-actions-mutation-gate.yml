@@ -1,0 +1,31 @@
+# GitHub Actions：断言强度门禁 job（追加到现有 ci.yml 的 jobs: 下）
+# 依赖：
+#   1. assets/mutation-gate.sh 落于仓库 .github/scripts/
+#   2. AGENTS.md 登记 mutation-engine-begin/end 块（engine/command/report/threshold/timeout/enforcement_date，
+#      格式见 mutation-gate.sh 头注；engine: 无（理由）= 显式豁免）
+# 裁决口径（mutation-gate.sh 内置，fail-closed）：
+#   - 仅对 risk: high 在场卡且边界∩diff 含行为文件时执法（纯高危起步）
+#   - 存活率超阈值 / 引擎命令失败 / 超时 / 报告缺失 / JSON 非法 / 零变体 → 失败（证据不足 = 不通过）
+#   - 高危卡在场而 AGENTS.md 无登记块 → 失败；engine: 无（理由）→ 警告放行（豁免留痕）
+#   - enforcement_date 未到 → 只记录不阻断（冷启动攒基线）；阈值禁止"跑不过就放宽"
+#   - 不可变异文件类（如 *.sql）在 run 末尾追加 --exclude-glob，显式排除优于静默零变体
+#   - 断言语义真伪仍归人审三焦点——本 job 只执法强度
+# 本地自检（置 review/done 前，含工作区未提交改动）：
+#   bash .github/scripts/mutation-gate.sh HEAD --worktree
+jobs:
+  mutation-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要 diff 基准（PR 为 base 分支，push 为前一提交）
+      - name: 断言强度门禁（PR 用基准分支，push 用前一提交——覆盖不可禁直推的场景）
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            echo "无有效基准（首推/force push），跳过——PR 渠道仍会拦截。"
+            exit 0
+          fi
+          chmod +x .github/scripts/*.sh
+          .github/scripts/mutation-gate.sh "${BASE}"
