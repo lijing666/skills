@@ -180,7 +180,7 @@ PYEOF
 fi
 
 # ── 3c) 真源指纹清单（生命周期条款，ui-spec-guide「规范包生命周期」；--require-final 或 README 状态=可用 时强制）──
-_sm_status="$(grep -oE '状态[:：][[:space:]]*(draft|可用|归档)' "${DIR}/README.md" 2>/dev/null | head -1 | grep -oE '(draft|可用|归档)$' || true)"
+_sm_status="$(grep -oE '状态(：|:)[[:space:]]*(draft|可用|归档)' "${DIR}/README.md" 2>/dev/null | head -1 | grep -oE '(draft|可用|归档)$' || true)"
 if [ -n "${REQUIRE_FINAL}" ] || [ "${_sm_status}" = "可用" ]; then
   if [ ! -f "${DIR}/source-manifest.json" ]; then
     fail "缺 source-manifest.json（真源指纹清单——Figma 路线记 file_key/normalization/overall_hash/逐页 node_id+content_hash（内容指纹，桥 dump 哈希即可产），HTML 路线记文件内容哈希；生命周期条款：确认置「可用」前必须产出，存量可用包须补产）"
