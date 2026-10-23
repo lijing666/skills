@@ -15,6 +15,11 @@
 #   ④ risk: high 必须有人审通过记录(约定登记于验收证据:"人审通过 <日期> 批准人<X>")
 #   ⑤ 页面卡(ui_source_page 非空)的执行进度 ui-gate 行必须非空且非"待执行"
 #      (ui-gate:待执行 + status:done = 后门组合,直接拦截)
+#   ⑥ 骨架先行红基线:声明「## 测试文件清单」的卡(行为卡代理)执行进度须有"- 红基线:"登记行
+#      且非占位(待执行/未验证/TODO)——断言先于实现的红基线留证缺失 = 骨架先行未执行,拦截
+#      (合法形态:『- 红基线:<命令> → N failed(先行失败留证)』或『- 红基线:豁免——<理由>』,
+#       豁免理由随卡人审;正源 = gates.md「测试骨架先行」节。实战教训:2026-10-23 三张行为卡
+#       测试与实现同批落盘、无红基线留证,全链门禁零报警——纯文字纪律无物料即静默失效)
 #
 # 用法:
 #   task-done-gate.sh <task卡路径>            # 单卡模式——置 done 前自查
@@ -135,7 +140,7 @@ check_one_card() {
   local usp ugate
   usp="$(fm "${card}" ui_source_page)"
   if [ -n "${usp}" ]; then
-    ugate="$(section "${card}" "执行进度" | grep "^- ui-gate:" | head -1 | sed 's/^- ui-gate:[[:space:]]*//')"
+    ugate="$(section "${card}" "执行进度" | grep "^- ui-gate:" | head -1 | sed 's/^- ui-gate:[[:space:]]*//' || true)"
     if [ -z "${ugate}" ] || grep -q "待执行" <<< "${ugate}"; then
       echo "🚫 ${card}:页面卡 status=done 但 ui-gate 未执行(当前:${ugate:-<缺行>})——'待执行 + done'后门组合,拦截" >&2
       failed=1
@@ -172,8 +177,23 @@ check_one_card() {
     fi
   fi
 
+  # ⑥ 骨架先行红基线:行为卡(声明测试文件清单 = 机械代理,宁可多查不少查)done 时
+  #    执行进度须有红基线登记行且非占位——先写断言跑红留证,再实现转绿(gates.md 测试骨架先行节)
+  if section "${card}" "测试文件清单" | grep -q "^- "; then
+    local redline
+    redline="$(section "${card}" "执行进度" | grep "^- 红基线:" | head -1 | sed 's/^- 红基线:[[:space:]]*//' || true)"
+    if [ -z "${redline}" ]; then
+      echo "🚫 ${card}:行为卡 status=done 但执行进度无『- 红基线:』登记行——骨架先行(断言先于实现)未留证,fail-closed" >&2
+      echo "   合法形态:『- 红基线:<命令> → N failed(先行失败留证)』或『- 红基线:豁免——<理由>(如:无新增测试,全部既有看护)』" >&2
+      failed=1
+    elif grep -qE "待执行|未验证|TODO" <<< "${redline}"; then
+      echo "🚫 ${card}:红基线登记行是占位符(当前:「${redline}」)——'占位 + done'后门组合,拦截" >&2
+      failed=1
+    fi
+  fi
+
   [ "${failed}" -eq 1 ] && { FAILED=1; return 0; }
-  echo "  ✅ ${card}:done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + ui-gate)"
+  echo "  ✅ ${card}:done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + ui-gate + 红基线)"
 }
 
 # ---------- 模式分派 ----------
@@ -208,4 +228,4 @@ if [ "${FAILED}" -eq 1 ]; then
   echo "❌ done 语义校验不通过:存在虚假 done——验收逐项有证据才算完成,'我认为完成了'不算" >&2
   exit 1
 fi
-echo "✅ done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + 页面卡 ui-gate;语义定义见 taskcard-template status 行)"
+echo "✅ done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + 页面卡 ui-gate + 行为卡红基线;语义定义见 taskcard-template status 行)"

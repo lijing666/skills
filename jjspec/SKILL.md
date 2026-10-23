@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.16.2
+  version: 1.17.0
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -108,7 +108,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/ui-pack-check.sh`：UI 规范包资产完整性门禁——README 资产类别登记 15 类封闭（颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材，无值须显式豁免）、icons.json 存在合法、素材清单无未终态条目、页面编号连续、页面短名英文 kebab-case、每页含视觉锚点；`--require-digest` 模式另查 digest=quantified、四段规格、合法 `entry`，并对账 `source_node_count`、量化表与覆盖账本行数、两表源定位符集合及唯一性与汇总 `source=N spec=N uncovered=0`；该机械核对不能替代对原始 DOM/Figma 节点树的逐项扫描复核；`--require-final` 定稿清零门禁查「人工补录」挂起清零（宪法第九节第 11 条，fail-closed；回归测试 `ui-pack-check.test.sh`）
 - `assets/menu-recon-check.sh`：菜单三源对账门禁（页面卡「## 菜单/入口对账」固定节执法，宪法第九节第 12 条）——ui-specs 中 entry 含 menu 的页面清单 ↔ 实现工程路由注册表 ↔ PRD 非目标表排除名单，自造菜单/菜单缺失/排除命中均拦（fail-closed；回归测试 `menu-recon-check.test.sh`）
 - `assets/page-excerpt-check.sh`：UI 规格摘录对账门禁（页面卡「## UI 规格摘录」节执法）——N=M 严格对账：登记 N/M 必须纯数字且与节点样式摘录条目数、ui_source_page 各页量化表实际行数三方相等，覆盖账本摘录条数须与节点样式摘录一一对应（六块齐全：缺账本块/条数错配/缩进表格式逃逸均拦），占位符未替换/规则文字占位/漏转抄/指针悬空均拦（fail-closed；单卡模式供开工前自查——不通过不得写第一行代码，`--diff` 批量供 CI 打回；回归测试 `page-excerpt-check.test.sh`）
-- `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked/review 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有「人审通过」记录、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭；fail-closed；回归测试 `task-done-gate.test.sh`）
+- `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked/review 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有「人审通过」记录、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭）、**行为卡红基线登记行**（声明测试文件清单的卡 done 时缺行/占位即拦——骨架先行的机械执法锚点，豁免显影，判据正源 gates.md 测试骨架先行节；fail-closed；回归测试 `task-done-gate.test.sh`）
 - `assets/doc-chain-check.sh`：文档链正主门禁（宪法第八节落点自检/正主唯一 + 批准效力正主判据的机械执法）——嵌套同名目录段（仅目录段，文件名含需求 ID 不受限）、同一需求 ID 核心文档多份（含活跃+归档双位置）、悬空批准（spec/hld approved 但正主 prd 未定稿；免 PRD 修复 Spec 无 prd.md 天然跳过）、状态自洽（approved 残留待批准 / draft 旧批准冒充 / 定稿与版本表不一致）均拦；archive 历史快照状态跳过、结构违例永久拦截；`--diff` 批量供 CI（fail-closed；回归测试 `doc-chain-check.test.sh`）
 - `assets/task-dag-check.sh`：任务卡 DAG 完备性门禁（⑥→⑦ 硬门，判据正源 taskcard-template.md 拆卡规则 2）——AC 反向完备（spec 每条 AC 至少被一张卡 `spec_ac` 认领 + 幻觉 AC 引用拦截，封堵滚动拆卡）、卡 `spec` 字段一致（防多 Spec 的 AC 编号歧义）、DAG 闭合（depends_on 引用存在 + Kahn 环检测，含自依赖）；无 tasks/ 未拆卡不拦（门禁对象是「开工而未闭合」不是「未拆卡」），无 spec.md 纯修复只查闭合与一致；单需求目录与项目根两模式，`--diff` 批量供 CI（fail-closed；回归测试 `task-dag-check.test.sh`）
 - `assets/pixel-diff.mjs`：HTML 原型路线逐卡内联视觉验收参考实现（本地跑，非 CI 物料——ui-gate 行 `pixel-diff <差异>% ≤ <PRD阈值>% PASS（命令:node pixel-diff.mjs ...）` 的可复跑命令本体）；基准 vs 实现截图逐像素对比，缺基准/截图/env.json/尺寸不一致/超阈值均 fail-closed，热区统计与 diff 返回值强制对账，env.json 机械校验视口/DPR/UA/字体就绪；`--out` 物化差异图/叠加图/热区三联裁剪 + report.json；阈值不因调优困难放宽，环境契约对齐后按热区归因修复。

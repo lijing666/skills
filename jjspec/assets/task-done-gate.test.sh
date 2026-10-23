@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # task-done-gate.test.sh — task-done-gate.sh 回归测试
 # 覆盖:合规 done PASS / 缺逐条证据 / AC 漏覆盖 / 高风险卡无人审 / ui-gate 待执行后门 /
-#       review 合法跳过 / 非页面卡 / 验收节为空 / 验收器漂移 / 路线感知(谎报拦截+figma合规) / 批量模式命中
+#       review 合法跳过 / 非页面卡 / 验收节为空 / 验收器漂移 / 路线感知(谎报拦截+figma合规) / 批量模式命中 /
+#       行为卡红基线(缺行拦截/占位拦截/豁免放行/证据放行)——骨架先行执法锚点(v1.17.0)
 # author: 李晶
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -57,6 +58,12 @@ D9="changes/r1/tasks/TASK-809.md"; mk_card "${D9}" done low  "" ""              
 D10="changes/r1/tasks/TASK-810.md"; mk_card "${D10}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "目测检查通过，页面与原型一致"  # 场景10 验收器漂移
 D11="changes/r1/tasks/TASK-811.md"; mk_card "${D11}" done low "ui-specs/yzz/pages/p-02.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景11 设计稿路线断言合规
 D12="changes/r1/tasks/TASK-812.md"; mk_card "${D12}" done low "ui-specs/yzz/pages/p-01.md" "${GOOD}" "结构化断言 8/9 项通过 PASS（命令:node assert.mjs）"  # 场景12 HTML路线谎报断言
+# add_tfl <卡> — 追加「## 测试文件清单」节(行为卡代理:声明清单即触发红基线检查)
+add_tfl() { printf '\n## 测试文件清单\n- grouping_agent/tests/test_guard.py\n' >> "$1"; }
+D13="changes/r1/tasks/TASK-813.md"; mk_card "${D13}" done low "" "${GOOD}"; add_tfl "${D13}"                                          # 场景13 行为卡缺红基线行
+D14="changes/r1/tasks/TASK-814.md"; mk_card "${D14}" done low "" "${GOOD}"; echo "- 红基线:待执行" >> "${D14}"; add_tfl "${D14}"       # 场景14 红基线占位
+D15="changes/r1/tasks/TASK-815.md"; mk_card "${D15}" done low "" "${GOOD}"; echo "- 红基线:豁免——无新增测试,全部既有看护" >> "${D15}"; add_tfl "${D15}"  # 场景15 豁免行
+D16="changes/r1/tasks/TASK-816.md"; mk_card "${D16}" done low "" "${GOOD}"; echo "- 红基线:pytest test_guard.py -q → 3 failed(先行失败留证) → 实现后全绿" >> "${D16}"; add_tfl "${D16}"  # 场景16 证据行
 git add -A >/dev/null 2>&1; git commit -qm cards
 
 echo "── 单卡模式"
@@ -72,6 +79,11 @@ ck 1 "场景9 验收节为空 FAIL"         bash "${SH}" "${D9}"
 ck 1 "场景10 验收器漂移 FAIL"        bash "${SH}" "${D10}"
 ck 0 "场景11 断言证据合规 PASS"      bash "${SH}" "${D11}"
 ck 1 "场景12 HTML路线谎报断言 FAIL"  bash "${SH}" "${D12}"
+echo "── 行为卡红基线(骨架先行执法锚点)"
+ck 1 "场景13 行为卡缺红基线行 FAIL"   bash "${SH}" "${D13}"
+ck 1 "场景14 红基线占位 FAIL"         bash "${SH}" "${D14}"
+ck 0 "场景15 红基线豁免行 PASS"       bash "${SH}" "${D15}"
+ck 0 "场景16 红基线证据行 PASS"       bash "${SH}" "${D16}"
 
 echo "── 批量模式(--diff)"
 out="$(bash "${SH}" --diff HEAD~1 2>&1)"; rc=$?
