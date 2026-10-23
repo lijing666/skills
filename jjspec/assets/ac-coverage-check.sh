@@ -10,6 +10,10 @@
 #   ③ 清单条目必须是合法路径格式(非法明确报"格式非法",区别于"文件不存在")
 #   ④ 清单条目指向的测试文件必须存在(合入时契约兑现;"待创建承诺"不许落空)
 #   ⑤ 清单条目必须是测试文件(防把源码文件声明成自己的看护——存在性是必要条件,此为充分性兜底)
+#   ⑥ (--integration-mark 启用时) risk: high 行为卡的清单须含 ≥1 个带集成标记的测试文件
+#      (真实性执法:高危卡天生碰真依赖,全 mock 的绿是假的;标记测试内部是否 mock 掉主依赖
+#      机械查不了——归人审三焦点,变异存活率交叉印证;AGENTS.md integration-mark 块未登记
+#      而开关开启 → 失败(fail-closed);risk 缺失/非法的卡跳过本项——由 mutation-gate.sh 拦)
 #   附:diff 只触碰豁免/测试文件 → 通过;触碰行为文件但无在场卡 → 失败(缺覆盖)
 #   断言语义对应(测试是否真测了 AC)仍归人审三焦点——本脚本只执法存在性契约。
 #
@@ -17,7 +21,10 @@
 #   在场卡   = 本次 diff(BASE...HEAD)中新建或修改的 changes/<需求ID>/tasks/TASK-*.md(归档件不算)
 #   豁免文件 = README.md、AGENTS.md、docs/*、changes/*
 #   测试文件 = 匹配测试模式集(内置约定 + --test-glob 追加)
-#   行为文件 = 非豁免 且 非测试文件
+#   纯资产   = 非可执行的交付工件(.md/.txt/.pdf/.svg/.png/.jpg/.jpeg/.gif/.webp/.ico/字体)
+#              ——归各自资产门禁(UI 管线对账/文档门禁),不计入行为文件:
+#              测试对应性/变异采样/集成标记的执法对象是可执行行为代码,规格资产变更不触发
+#   行为文件 = 非豁免 且 非测试文件 且 非纯资产
 #
 # 测试文件内置模式集(命名约定;识别不了按行为文件处理 = 宁可多要清单,不可漏要):
 #   Python            test_*.py  *_test.py
@@ -34,13 +41,15 @@
 #   目录段型          路径任一段 ∈ {tests, test, __tests__, spec, specs, e2e, androidTest, ohosTest}
 #   项目布局非典型时用 --test-glob 追加,不替换内置集。
 #
-# 用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...]
+# 用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...] [--integration-mark]
 #   base_ref    比较基准,必传(在场卡过滤依赖它):PR 场景 origin/${{ github.base_ref }},
 #               push 直推场景 ${{ github.event.before }}(全零 sha 由 CI 层跳过)
 #   changes_dir 任务卡根目录,默认仓库根 changes/(卡路径匹配与 extract-boundary.sh 相同,固定 changes/ 前缀)
 #   --test-glob 追加项目特有测试模式(fnmatch glob,可多次;注意 case 匹配中 * 可跨斜杠)
+#   --integration-mark 开关型(无值):启用真实性执法,从 AGENTS.md integration-mark 块读标记串
+#               (登记见 assets/AGENTS.md.template);默认关——不传对现有项目零影响
 # 配套:taskcard-template.md(## 测试文件清单 格式);ci-snippets/github-actions-ac-coverage.yml;
-#       references/gates.md 第二层(测试对应性检查)
+#       assets/AGENTS.md.template(integration-mark 登记块);references/gates.md 第二层(测试对应性检查)
 # author: 李晶
 set -euo pipefail
 
@@ -49,9 +58,11 @@ shift
 CHANGES="changes"
 if [ $# -gt 0 ] && [[ "${1}" != --* ]]; then CHANGES="${1}"; shift; fi
 TEST_GLOBS=()
+CHECK_INT=0
 while [ $# -gt 0 ]; do
   case "${1}" in
     --test-glob) shift; TEST_GLOBS+=("${1:?--test-glob 需要一个 glob 参数}") ;;
+    --integration-mark) CHECK_INT=1 ;;
     *) echo "❌ 未知参数:${1}(用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...])" >&2; exit 1 ;;
   esac
   shift
@@ -59,6 +70,21 @@ done
 
 DIFF_FILES="$(mktemp)"; WORKDIR="$(mktemp -d)"
 trap 'rm -rf "${DIFF_FILES}" "${WORKDIR}"' EXIT
+
+# 0.5 集成标记读取(--integration-mark 启用时;fail-closed:开关开而未登记 = 配置不一致)
+INT_MARK=""
+if [ "${CHECK_INT}" -eq 1 ]; then
+  AGENTS_MD="$(git rev-parse --show-toplevel 2>/dev/null)/AGENTS.md"
+  if [ -f "${AGENTS_MD}" ]; then
+    _iblock="$(sed -n '/integration-mark-begin/,/integration-mark-end/p' "${AGENTS_MD}")"
+    INT_MARK="$(sed -n 's/^mark:[[:space:]]*//p' <<<"${_iblock}" | head -1)"
+  fi
+  if [ -z "${INT_MARK}" ]; then
+    echo "❌ --integration-mark 已启用但 AGENTS.md 无 integration-mark 登记块(或 mark 行为空)——配置不一致,fail-closed" >&2
+    echo "   修正方式:AGENTS.md 登记 integration-mark-begin/end 块(格式见 assets/AGENTS.md.template),或 CI 去掉该开关。" >&2
+    exit 1
+  fi
+fi
 
 # 1. diff 文件清单——失败显式失败,禁止静默放行(fail-closed)
 #    --no-renames:重命名拆成"删旧+增新",两侧都参与分类(防改名搬运)
@@ -71,6 +97,13 @@ fi
 is_exempt() {
   case "${1}" in
     README.md|AGENTS.md|docs/*|changes/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_asset() {  # 纯资产(交付工件,非可执行)——不计入行为文件(口径见头注"纯资产")
+  case "${1}" in
+    *.md|*.txt|*.pdf|*.svg|*.png|*.jpg|*.jpeg|*.gif|*.webp|*.ico|*.woff|*.woff2|*.ttf) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -116,6 +149,7 @@ while IFS= read -r -d '' f || [ -n "${f}" ]; do
   fi
   is_exempt "${f}" && continue
   is_test_file "${f}" && continue
+  is_asset "${f}" && continue
   behavior+=("${f}")
 done < "${DIFF_FILES}"
 
@@ -204,6 +238,24 @@ while IFS= read -r card; do
       FAILED=1
     fi
   done < "${CARD_TESTS}"
+
+  # ⑥ 集成标记检查(--integration-mark 启用时;仅 risk: high——高危卡天生碰真依赖)
+  if [ "${CHECK_INT}" -eq 1 ]; then
+    _risk="$(fm "${card}" risk)"
+    if [ "${_risk}" = "high" ]; then
+      _int_hit=0
+      while IFS= read -r entry; do
+        [ -z "${entry}" ] && continue
+        _p="${entry%%::*}"
+        if [ -f "${_p}" ] && grep -qF -- "${INT_MARK}" "${_p}"; then _int_hit=1; break; fi
+      done < "${CARD_TESTS}"
+      if [ "${_int_hit}" -eq 0 ]; then
+        echo "🚫 ${card}:risk: high 行为卡清单无带集成标记(${INT_MARK})的测试——真依赖验证缺失,全 mock 的绿是假的,fail-closed" >&2
+        FAILED=1
+      fi
+    fi
+    # risk 缺失/非法不做本项(跳过)——由 mutation-gate.sh 拦(缺 risk 即 FAIL),双门禁分工
+  fi
 done <<< "${present}"
 
 if [ "${FAILED}" -eq 1 ]; then

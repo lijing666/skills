@@ -21,6 +21,21 @@
 - 单测单文件：<精确命令，如 pytest tests/test_foo.py -x>
 - Lint：<精确命令>
 - 全量测试：<精确命令，含必要参数>
+<!-- mutation-engine-begin（断言强度门禁数据源：mutation-gate.sh 解析本区块，勿删标记。
+     行格式与判据见 mutation-gate.sh 头注；engine: 无（理由）= 显式豁免（警告放行）；
+     整块缺失而 risk: high 卡在场 = CI 失败（fail-closed）——冷启动项目先显式豁免攒基线再登记引擎） -->
+engine: <变异引擎名，如 mutmut/PIT/Stryker；或 无（理由）>
+command: <跑变异到报告的完整命令，{targets} 替换为卡内行为文件>
+report: <标准 JSON 报告路径，相对仓库根，须含 total/killed/survived>
+threshold: 30
+timeout: 600
+enforcement_date: <YYYY-MM-DD，留空 = 立即执法>
+<!-- mutation-engine-end -->
+<!-- integration-mark-begin（集成测试标记约定数据源：ac-coverage-check.sh --integration-mark 读取，勿删标记。
+     登记后 risk: high 行为卡的 ## 测试文件清单须含 ≥1 个带该标记的集成测试条目（真实性执法）；
+     未登记 = 该判据不生效；执行环境策略（testcontainers/embedded/预发）登记进 R-INT 规则 -->
+mark: <集成测试标记串，如 @pytest.mark.integration / @Tag("integration") / [IntegrationTest]>
+<!-- integration-mark-end -->
 
 ## 4. 硬性规则（R 编号，违反后果必写）
 <!-- 可判定、用编号、宁少勿多（100~150 行甜区）。能进类型/lint 的不写在这里 -->
@@ -30,6 +45,8 @@
 - R2: <跨模块调用只能经目标模块 api/__init__，禁止 import internals——违反破坏模块边界>
 - R3: <本项目的领域红线>
 - R-UI（带 UI 规范的项目选用）: 页面实现必须以 `ui-specs/` 对应页面规格为唯一布局依据，任务卡内须有规格摘录；无原型页面（空页面-新设计）须先在卡内产出设计规格再实现——违反导致实现凭通用模板直觉偏离原型、视觉验收大面积返工
+- R-FLAG（带开关灰度的项目选用）: 特性开关统一存放 <配置处>、命名 <约定>；观测期正向转正后下一迭代删除对应开关——违反后果：开关债堆积、死开关无人敢动（开关判定判据见 hld-template.md 观测与灰度声明节）
+- R-INT（有持久化/外部依赖的项目选用）: 集成测试执行环境 <testcontainers / embedded / 预发，镜像 tag 与 CI 锁定一致>；集成标记测试禁止 mock 掉被测的主外部依赖（DB 连接 / HTTP 客户端 / 消息生产者）——违反后果：绿是假的，mock 与真实行为的差异（事务/锁/超时/序列化）上线即爆
 
 ## 5. 风险区清单（AI 禁改区）
 <!-- risk-zones-begin（风险区门禁数据源：risk-zone-check.sh 解析本区块，勿删标记）

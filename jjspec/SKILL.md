@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.15.2
+  version: 1.16.2
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -51,8 +51,8 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | ⑤ 方案起草 + 停靠门 | AI 起草 HLD；架构知识协助按 hld-template.md 用途块的"架构知识协助路由"执行（该块是唯一正源，不在此复述）；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
 | ⑥ 任务卡 DAG | **硬门槛：未读 taskcard-template.md 不得产出任务卡（凭记忆复述格式曾致缺 `## 测试文件清单` 被 ac-coverage-check 拦截，2026-10-12）**；单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验；**DAG 完备性硬门：第一张卡开工前须过 task-dag-check.sh（AC 反向完备 + 依赖闭合），未过禁止进⑦**（判据与豁免口径见 taskcard-template.md 拆卡规则 2）；**拆卡完成即停靠**：硬门全绿后停，交付任务卡清单 + 调度方案（单分支报拓扑序、多分支按拆卡规则 3 三要素交选），明示「已停在⑥」，获用户「继续」指令才进⑦——单卡与缺陷修复不豁免（上下文中断后靠落盘任务卡 + 状态即续接恢复，无停靠即无恢复点） | taskcard-template.md |
 | ⑦ 分级执行 | 低风险 Agent 自主循环（前置低风险卡 done 即解堵下游，连续执行不等提交）；高风险逐卡 + 100% 人审（置 review 必附人审请示材料包，人审通过才解堵下游；「合入」与解堵脱钩，提交窗口按拓扑序批量执行）；多卡并行按 ⑥ 交付的调度方案执行（判据见 taskcard-template.md 拆卡规则 3） | gates.md |
-| ⑧ 三层门禁 + 开关灰度 | 机械 → 行为 → AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；功能默认关合入主干，回滚默认=关开关，不可逆变更显式标注恢复方式 | gates.md, assets/extract-boundary.sh, assets/boundary-check.sh, assets/ac-coverage-check.sh, assets/risk-zone-check.sh, hld-template.md |
-| ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），须带指标、负责人、结束条件 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
+| ⑧ 三层门禁 + 开关灰度 | 机械 → 行为（测试对应性〔含集成标记〕+ 断言强度采样）→ AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；开关与灰度判据（含新工程/新端首上线免开关口径）见 hld-template.md 观测与灰度声明节，不可逆变更显式标注恢复方式 | gates.md, assets/extract-boundary.sh, assets/boundary-check.sh, assets/ac-coverage-check.sh, assets/mutation-gate.sh, assets/risk-zone-check.sh, hld-template.md |
+| ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），指标/负责人/结束条件声明落 HLD 观测与灰度声明节（判据正源）→ 到期取数对照结束条件（对账附发布证据包）、负责人拍板转正/回滚 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
 
 **模式判定（触线清单，命中任一 → 走门，全不命中 → 直通）**：风险区（AGENTS.md 第 5 节清单）· 跨模块接口变更 · 全局运行时行为（AOP/拦截器/全局配置）· schema 迁移/不可逆变更 · 金额/幂等/并发 · 预计 ≥3 张任务卡——与三层门禁分层抽审的 100% 人审维度对齐（gates.md）。
 
@@ -101,8 +101,10 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
 - `assets/extract-boundary.sh`：边界提取层——自动扫描进行中任务卡（```boundary 围栏 + `## 边界` 列表双格式），白名单 = 在场卡（本次 diff 新建/修改的卡）边界并集 + 豁免段；内置 fail-closed 裁决（非豁免文件缺卡覆盖/在场卡未声明边界即失败）。CI 零手改，免手工指定任务卡路径
 - `assets/boundary-check.sh`：越界检测——diff 对照边界文件（由 extract-boundary.sh 生成），超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
+- `assets/release-evidence.sh`：发布证据包聚合器——发布门（⑧灰度开启前）/观测期拍板门（⑨到期）的证据一页汇总：AC 覆盖账本、高危卡变异存活率、集成标记条目、HLD 观测声明对账 + **采集落点认领机械执法**（拆卡规则 10 的机器对账）；缺口显影，`--strict` 有缺口 exit 1；产物贴 PR 描述/发布记录（一次性数据非台账）；E2E 冒烟证据行格式正源 gates.md 发布证据包节（回归测试 `release-evidence.test.sh`）
+- `assets/mutation-gate.sh`：断言强度门禁——变异引擎自动注入变体验证测试有效性，仅对 `risk: high` 在场卡执法（纯高危起步）：存活率超阈值 / 引擎失败 / 超时 / 零变体 / 报告缺失均 fail-closed，`engine: 无（理由）` 显式豁免警告放行；登记块在项目 AGENTS.md（模板 assets/AGENTS.md.template），基线启用日期前只记录不阻断；判据正源 gates.md 断言强度门禁节（回归测试 `mutation-gate.test.sh`）
 - `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
-- `assets/ac-coverage-check.sh`：测试对应性门禁——diff 触碰行为文件（非豁免且非测试文件）时，覆盖卡必须声明 `## 测试文件清单`（taskcard-template 定义格式）；清单条目格式非法/悬空/非测试文件、spec_ac 幻觉引用均失败（fail-closed；回归测试 `ac-coverage-check.test.sh`）。测试文件识别内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell 与测试目录段），`--test-glob` 追加项目特有布局
+- `assets/ac-coverage-check.sh`：测试对应性门禁——diff 触碰行为文件（非豁免且非测试文件）时，覆盖卡必须声明 `## 测试文件清单`（taskcard-template 定义格式）；清单条目格式非法/悬空/非测试文件、spec_ac 幻觉引用均失败（fail-closed；回归测试 `ac-coverage-check.test.sh`）。测试文件识别内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell 与测试目录段），`--test-glob` 追加项目特有布局；`--integration-mark` 开关启用真实性执法（默认关，现有项目零影响）——项目 AGENTS.md 登记标记约定后，risk: high 行为卡清单须含 ≥1 个带标记的集成测试条目（高危卡天生碰真依赖，全 mock 的绿是假的；判据见 gates.md 第二层）
 - `assets/ui-pack-check.sh`：UI 规范包资产完整性门禁——README 资产类别登记 15 类封闭（颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材，无值须显式豁免）、icons.json 存在合法、素材清单无未终态条目、页面编号连续、页面短名英文 kebab-case、每页含视觉锚点；`--require-digest` 模式另查 digest=quantified、四段规格、合法 `entry`，并对账 `source_node_count`、量化表与覆盖账本行数、两表源定位符集合及唯一性与汇总 `source=N spec=N uncovered=0`；该机械核对不能替代对原始 DOM/Figma 节点树的逐项扫描复核；`--require-final` 定稿清零门禁查「人工补录」挂起清零（宪法第九节第 11 条，fail-closed；回归测试 `ui-pack-check.test.sh`）
 - `assets/menu-recon-check.sh`：菜单三源对账门禁（页面卡「## 菜单/入口对账」固定节执法，宪法第九节第 12 条）——ui-specs 中 entry 含 menu 的页面清单 ↔ 实现工程路由注册表 ↔ PRD 非目标表排除名单，自造菜单/菜单缺失/排除命中均拦（fail-closed；回归测试 `menu-recon-check.test.sh`）
 - `assets/page-excerpt-check.sh`：UI 规格摘录对账门禁（页面卡「## UI 规格摘录」节执法）——N=M 严格对账：登记 N/M 必须纯数字且与节点样式摘录条目数、ui_source_page 各页量化表实际行数三方相等，覆盖账本摘录条数须与节点样式摘录一一对应（六块齐全：缺账本块/条数错配/缩进表格式逃逸均拦），占位符未替换/规则文字占位/漏转抄/指针悬空均拦（fail-closed；单卡模式供开工前自查——不通过不得写第一行代码，`--diff` 批量供 CI 打回；回归测试 `page-excerpt-check.test.sh`）

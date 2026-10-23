@@ -225,6 +225,87 @@ git mv changes/R1/tasks/TASK-001.md changes/R1/tasks/archive/TASK-001.md
 echo v12 >> src/payment.py && git add -A && git commit -qm "s12 卡归档"
 expect "归档卡不算在场拦截" 1 "缺任务卡覆盖" HEAD~1
 
+# 场景13：--integration-mark 开启但 AGENTS.md 未登记 → 拦截(fail-closed)
+git mv changes/R1/tasks/archive/TASK-001.md changes/R1/tasks/TASK-001.md
+cat > changes/R1/tasks/TASK-001.md <<'EOF'
+---
+id: TASK-001
+title: 支付
+risk: high
+spec: changes/R1/spec.md
+spec_ac: [AC-01]
+status: in_progress
+---
+
+## 边界
+- src/payment.py
+
+## 测试文件清单
+- tests/test_payment.py
+EOF
+echo v13 >> src/payment.py && git add -A && git commit -qm "s13 开关开无登记"
+expect "integration开关开未登记拦截" 1 "integration-mark 登记块" HEAD~1 --integration-mark
+
+# 场景14：登记标记 + 高危卡清单无带标记测试 → 拦截
+cat > AGENTS.md <<'EOF'
+# 项目规则
+<!-- integration-mark-begin -->
+mark: @pytest.mark.integration
+<!-- integration-mark-end -->
+EOF
+perl -pi -e 's/^title: 支付$/title: 支付 s14/' changes/R1/tasks/TASK-001.md
+echo v14 >> src/payment.py && git add -A && git commit -qm "s14 高危无集成标记"
+expect "高危卡缺集成标记拦截" 1 "真依赖验证缺失" HEAD~1 --integration-mark
+
+# 场景15：高危卡清单含带标记测试 → 放行
+printf '# -*- coding: utf-8 -*-\nimport pytest\n\n@pytest.mark.integration\ndef test_deposit_real_db():\n    assert True\n' > tests/test_payment_integration.py
+cat > changes/R1/tasks/TASK-001.md <<'EOF'
+---
+id: TASK-001
+title: 支付
+risk: high
+spec: changes/R1/spec.md
+spec_ac: [AC-01]
+status: in_progress
+---
+
+## 边界
+- src/payment.py
+
+## 测试文件清单
+- tests/test_payment.py
+- tests/test_payment_integration.py
+EOF
+echo v15 >> src/payment.py && git add -A && git commit -qm "s15 合规集成"
+expect "高危卡集成标记放行" 0 "测试对应性检查通过" HEAD~1 --integration-mark
+
+# 场景16：不带 --integration-mark → 向后兼容(无标记也放行,现有项目零影响)
+perl -pi -e 's/^title: 支付$/title: 支付 s16/' changes/R1/tasks/TASK-001.md
+echo v16 >> src/payment.py && git add -A && git commit -qm "s16 向后兼容"
+expect "不带开关向后兼容" 0 "测试对应性检查通过" HEAD~1
+
+# 场景17：低危卡无集成标记 + 开关开 → 放行(纯高危口径)
+perl -pi -e 's/^risk: high$/risk: low/' changes/R1/tasks/TASK-001.md
+echo v17 >> src/payment.py && git add -A && git commit -qm "s17 低危跳过"
+# 场景18：纯资产（ui-specs 规格 md）不计入行为文件 → 无行为文件放行（yzz 原型仓真实案例）
+cat > changes/R1/tasks/TASK-001.md <<'EOF'
+---
+id: TASK-001
+title: 支付 s18
+risk: high
+spec: changes/R1/spec.md
+spec_ac: [AC-01]
+status: in_progress
+---
+
+## 边界
+- ui-specs/yzz/pages/p-01.md
+EOF
+mkdir -p ui-specs/yzz/pages
+echo spec > ui-specs/yzz/pages/p-01.md
+git add -A && git commit -qm "s18 纯资产"
+expect "纯资产不计入行为文件" 0 "diff 未触碰行为文件" HEAD~1
+
 if [ "${FAILED}" -eq 0 ]; then
   echo "ALL PASS"
 else
