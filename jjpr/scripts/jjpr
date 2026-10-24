@@ -234,6 +234,9 @@ cmd_push() {
 
 # 推送当前分支后以 App 身份创建 PR：参数透传给 gh pr create。
 # 防呆：拒绝在默认分支上直接工作。
+# 分支经显式 URL 推送无法设上游跟踪，gh pr create 缺 --head 时会以
+# "must first push the current branch" 拒绝（实战：PR #13/#14 均需手工补
+# --head）——失败且命中等价报错时自动带 --head <分支> 重试，消除手工补刀。
 cmd_pr() {
   local cur
   cur="$(git branch --show-current 2>/dev/null)" || die "当前目录不是 git 仓库"
@@ -242,9 +245,22 @@ cmd_pr() {
     "") die "当前处于 detached HEAD，无法创建 PR" ;;
   esac
   cmd_push
-  local tok
+  local tok out
   tok="$(get_token)" || die "安装令牌获取失败（可先跑 jjpr doctor 定位）"
-  GH_TOKEN="$tok" exec gh pr create "$@"
+  if out="$(GH_TOKEN="$tok" gh pr create "$@" 2>&1)"; then
+    printf '%s\n' "$out"
+    return 0
+  fi
+  case "$out" in
+    *"must first push"*|*"No commits between"*)
+      echo "分支已推送但缺上游跟踪——自动带 --head $cur 重试" >&2
+      GH_TOKEN="$tok" gh pr create --head "$cur" "$@"
+      ;;
+    *)
+      printf '%s\n' "$out" >&2
+      return 1
+      ;;
+  esac
 }
 
 # 预检：依赖 -> 配置 -> 私钥 -> 仓库上下文 -> 令牌 -> gh 访问，逐项检查，
