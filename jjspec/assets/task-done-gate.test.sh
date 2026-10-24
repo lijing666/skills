@@ -2,7 +2,7 @@
 # task-done-gate.test.sh — task-done-gate.sh 回归测试
 # 覆盖:合规 done PASS / 缺逐条证据 / AC 漏覆盖 / 高风险卡无人审 / ui-gate 待执行后门 /
 #       review 合法跳过 / 非页面卡 / 验收节为空 / 验收器漂移 / 路线感知(谎报拦截+figma合规) / 批量模式命中 /
-#       行为卡红基线(缺行拦截/占位拦截/豁免放行/证据放行)——骨架先行执法锚点(v1.17.0)
+#       行为卡红基线(缺行拦截/占位拦截/豁免放行/证据放行/全角冒号兼容)——骨架先行执法锚点(v1.17.0/v1.17.2)
 # author: 李晶
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -84,6 +84,8 @@ ck 1 "场景13 行为卡缺红基线行 FAIL"   bash "${SH}" "${D13}"
 ck 1 "场景14 红基线占位 FAIL"         bash "${SH}" "${D14}"
 ck 0 "场景15 红基线豁免行 PASS"       bash "${SH}" "${D15}"
 ck 0 "场景16 红基线证据行 PASS"       bash "${SH}" "${D16}"
+D17="changes/r1/tasks/TASK-817.md"; mk_card "${D17}" done low "" "${GOOD}"; echo "- 红基线：pytest test_x.py → 2 failed（全角冒号变体）→ 实现后全绿" >> "${D17}"; add_tfl "${D17}"  # 场景17 全角冒号红基线
+ck 0 "场景17 全角冒号红基线 PASS"     bash "${SH}" "${D17}"
 
 echo "── 批量模式(--diff)"
 out="$(bash "${SH}" --diff HEAD~1 2>&1)"; rc=$?

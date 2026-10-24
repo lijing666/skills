@@ -140,7 +140,7 @@ check_one_card() {
   local usp ugate
   usp="$(fm "${card}" ui_source_page)"
   if [ -n "${usp}" ]; then
-    ugate="$(section "${card}" "执行进度" | grep "^- ui-gate:" | head -1 | sed 's/^- ui-gate:[[:space:]]*//' || true)"
+    ugate="$(section "${card}" "执行进度" | grep -E "^- ui-gate(:|：)" | head -1 | sed -E 's/^- ui-gate(:|：)[[:space:]]*//' || true)"
     if [ -z "${ugate}" ] || grep -q "待执行" <<< "${ugate}"; then
       echo "🚫 ${card}:页面卡 status=done 但 ui-gate 未执行(当前:${ugate:-<缺行>})——'待执行 + done'后门组合,拦截" >&2
       failed=1
@@ -181,7 +181,7 @@ check_one_card() {
   #    执行进度须有红基线登记行且非占位——先写断言跑红留证,再实现转绿(gates.md 测试骨架先行节)
   if section "${card}" "测试文件清单" | grep -q "^- "; then
     local redline
-    redline="$(section "${card}" "执行进度" | grep "^- 红基线:" | head -1 | sed 's/^- 红基线:[[:space:]]*//' || true)"
+    redline="$(section "${card}" "执行进度" | grep -E "^- 红基线(:|：)" | head -1 | sed -E 's/^- 红基线(:|：)[[:space:]]*//' || true)"
     if [ -z "${redline}" ]; then
       echo "🚫 ${card}:行为卡 status=done 但执行进度无『- 红基线:』登记行——骨架先行(断言先于实现)未留证,fail-closed" >&2
       echo "   合法形态:『- 红基线:<命令> → N failed(先行失败留证)』或『- 红基线:豁免——<理由>(如:无新增测试,全部既有看护)』" >&2
