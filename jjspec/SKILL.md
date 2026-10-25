@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.17.5
+  version: 1.17.8
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -105,7 +105,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/mutation-gate.sh`：断言强度门禁——变异引擎自动注入变体验证测试有效性，仅对 `risk: high` 在场卡执法（纯高危起步）：存活率超阈值 / 引擎失败 / 超时 / 零变体 / 报告缺失均 fail-closed，`engine: 无（理由）` 显式豁免警告放行；登记块在项目 AGENTS.md（模板 assets/AGENTS.md.template），基线启用日期前只记录不阻断；判据正源 gates.md 断言强度门禁节（回归测试 `mutation-gate.test.sh`）
 - `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
 - `assets/ac-coverage-check.sh`：测试对应性门禁——diff 触碰行为文件（非豁免且非测试文件）时，覆盖卡必须声明 `## 测试文件清单`（taskcard-template 定义格式）；清单条目格式非法/悬空/非测试文件、spec_ac 幻觉引用均失败（fail-closed；回归测试 `ac-coverage-check.test.sh`）。测试文件识别内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell 与测试目录段），`--test-glob` 追加项目特有布局；`--integration-mark` 开关启用真实性执法（默认关，现有项目零影响）——项目 AGENTS.md 登记标记约定后，risk: high 行为卡清单须含 ≥1 个带标记的集成测试条目（高危卡天生碰真依赖，全 mock 的绿是假的；判据见 gates.md 第二层）
-- `assets/ui-pack-check.sh`：UI 规范包资产完整性门禁——README 资产类别登记 15 类封闭（颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材，无值须显式豁免）、icons.json 存在合法、素材清单无未终态条目、页面编号连续、页面短名英文 kebab-case、每页含视觉锚点；`--require-digest` 模式另查 digest=quantified、四段规格、合法 `entry`，并对账 `source_node_count`、量化表与覆盖账本行数、两表源定位符集合及唯一性与汇总 `source=N spec=N uncovered=0`；该机械核对不能替代对原始 DOM/Figma 节点树的逐项扫描复核；`--require-final` 定稿清零门禁查「人工补录」挂起清零（宪法第九节第 11 条，fail-closed；回归测试 `ui-pack-check.test.sh`）
+- `assets/ui-pack-check.sh`：UI 规范包资产完整性门禁——README 资产类别登记 15 类封闭（颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材，无值须显式豁免）、icons.json 存在合法、素材清单无未终态条目、页面编号连续、页面短名英文 kebab-case、每页含视觉锚点；`--require-digest` 模式另查 digest=quantified、四段规格、合法 `entry`，并对账 `source_node_count`、量化表与覆盖账本行数、两表源定位符集合及唯一性与汇总 `source=N spec=N uncovered=0`，另查 TEXT 范围样式与蒙版出处字段（6i/6j，设计稿路线每行必留 isMask/characterStyleOverrides 读取痕迹——字段缺失即拦，信号丢失在结构上不可能；mixed 未分解与蒙版缺作用目标仍拦；压平/虚登由 `--source-spot-check <REST nodes dump>` 回源字段 diff 证伪，存量包逐行拦截即缺失清单、回填节奏用户拍板）；该机械核对不能替代对原始 DOM/Figma 节点树的逐项扫描复核；`--require-final` 定稿清零门禁查「人工补录」挂起清零（宪法第九节第 11 条，fail-closed；回归测试 `ui-pack-check.test.sh`）
 - `assets/menu-recon-check.sh`：菜单三源对账门禁（页面卡「## 菜单/入口对账」固定节执法，宪法第九节第 12 条）——ui-specs 中 entry 含 menu 的页面清单 ↔ 实现工程路由注册表 ↔ PRD 非目标表排除名单，自造菜单/菜单缺失/排除命中均拦（fail-closed；回归测试 `menu-recon-check.test.sh`）
 - `assets/page-excerpt-check.sh`：UI 规格摘录对账门禁（页面卡「## UI 规格摘录」节执法）——N=M 严格对账：登记 N/M 必须纯数字且与节点样式摘录条目数、ui_source_page 各页量化表实际行数三方相等，覆盖账本摘录条数须与节点样式摘录一一对应（六块齐全：缺账本块/条数错配/缩进表格式逃逸均拦），占位符未替换/规则文字占位/漏转抄/指针悬空均拦（fail-closed；单卡模式供开工前自查——不通过不得写第一行代码，`--diff` 批量供 CI 打回；回归测试 `page-excerpt-check.test.sh`）
 - `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked/review 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有「人审通过」记录、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭）、**行为卡红基线登记行**（声明测试文件清单的卡 done 时缺行/占位即拦——骨架先行的机械执法锚点，豁免显影，判据正源 gates.md 测试骨架先行节；fail-closed；回归测试 `task-done-gate.test.sh`）

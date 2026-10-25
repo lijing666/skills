@@ -39,6 +39,13 @@
 #        6f 覆盖账本矢量/位图条目「分类/处理方式」∈ 封闭处置态（图标位/导出资产/代码复刻/豁免/人工补录）
 #        6g 量化表有 TEXT 行则文案清单静态区非空（空清单将使文案覆盖率断言全 FAIL）
 #        6h 颜色/填充列渐变值括号配对完整（防提取脚本字符预算截断——半截渐变是非法视觉真源）
+#        6i TEXT 范围样式出处字段强制（设计稿路线 TEXT 行必含「范围样式: 无|有 N 段…|未分解」——缺失 = 提取器未留读取痕迹即拦；
+#           mixed 无「未分解」标记仍拦；压平 = 读了源却写节点级单值，包内无痕迹，由 --source-spot-check 回源 diff 证伪）
+#        6j 蒙版出处字段强制（设计稿路线每行必含「蒙版: 无|是(alpha/luminance)→作用于 <目标>」——缺失即拦；
+#           值非「无」而缺「作用于」仍拦）
+#   11. 回源抽验字段级 diff（--source-spot-check <REST nodes dump.json>，设计稿路线）：
+#       机械比对量化表出处字段 ↔ 源节点 characterStyleOverrides/isMask 实况，不一致即拦——
+#       抽验从人工找差异变字段 diff（dump = 调用方经 Figma REST GET /v1/files/:key/nodes 产出，采样范围由 dump 定义）
 #   7. 引用不出清单（宪法第九节第 9 条）：pages/ 中引用的 icons/*.svg 与 assets/*.png、
 #      icons.json 的 svg 字段指向，文件必须实际存在
 #   8. 字体文件联动（guide 语义归并步「字体处置拆分」）：tokens 含非系统字体族名（品牌字体）时，
@@ -55,7 +62,9 @@ set -uo pipefail
 DIR=""
 REQUIRE_DIGEST=""
 REQUIRE_FINAL=""
+SPOT=""
 _digest_pending=0
+_spot_pending=0
 for _arg in "$@"; do
   if [ "${_digest_pending}" = "1" ]; then
     _digest_pending=0
@@ -64,13 +73,19 @@ for _arg in "$@"; do
       *) REQUIRE_DIGEST="${_arg}"; continue ;;
     esac
   fi
+  if [ "${_spot_pending}" = "1" ]; then
+    _spot_pending=0
+    SPOT="${_arg}"; continue
+  fi
   case "${_arg}" in
     --require-digest) REQUIRE_DIGEST="${REQUIRE_DIGEST:-all}"; _digest_pending=1 ;;
     --require-final) REQUIRE_FINAL=1 ;;
+    --source-spot-check) _spot_pending=1 ;;
     *) [ -z "${DIR}" ] && DIR="${_arg}" ;;
   esac
 done
-unset _digest_pending _arg
+unset _digest_pending _spot_pending _arg
+[ -z "${SPOT}" ] || [ -f "${SPOT}" ] || { echo "❌ --source-spot-check 指向的 REST dump 文件不存在: ${SPOT}" >&2; exit 2; }
 FAILS=()
 fail() { FAILS+=("$1"); }
 
@@ -328,6 +343,14 @@ def is_material(row):
 def is_text_row(row):
     return type_i >= 0 and type_i < len(row) and row[type_i].strip().startswith('TEXT')
 
+is_figma = False
+_mf = os.path.join(pack, 'source-manifest.json')
+if os.path.exists(_mf):
+    try:
+        is_figma = bool(json.load(open(_mf, encoding='utf-8')).get('file_key'))
+    except Exception:
+        pass
+
 has_text = False
 for n, row in enumerate(data, start=2):
     if is_text_row(row):
@@ -354,6 +377,22 @@ for n, row in enumerate(data, start=2):
             seg = seg.strip()
             if seg.count('(') != seg.count(')'):
                 problems.append(base + ' 6h 量化表第' + str(n) + '行 渐变值括号不配对（疑提取脚本字符预算截断，须回填完整值，禁止以半截渐变作视觉真源）: ' + seg[:80])
+        cv = row[color_i].strip() if 0 <= color_i < len(row) else ''
+        rowtext = ' '.join(row)
+        if is_figma:
+            # 6j) 蒙版出处字段强制：每行必含「蒙版: 无 / 是(alpha|luminance)→作用于 <目标>」——isMask 读取痕迹必留
+            if not re.search(r'蒙版[:：]', rowtext):
+                problems.append(base + ' 6j 量化表第' + str(n) + '行 缺「蒙版」出处字段（isMask 读取痕迹必留——蒙版: 无 / 蒙版: 是（alpha|luminance）→ 作用于 <目标定位符>；字段缺失 = 提取器未读源信号，蒙版被按可见图层转抄时门禁失明）')
+            else:
+                _rest = re.sub(r'蒙版[:：]\s*无', '', rowtext)
+                if re.search(r'蒙版', _rest) and not re.search(r'作用于', rowtext):
+                    problems.append(base + ' 6j 量化表第' + str(n) + '行 蒙版登记缺「作用于 <目标节点定位符>」（蒙版填充定义被 mask 节点的显隐而非自身渲染，禁止按可见图层转抄）: ' + rowtext[:60])
+            # 6i) TEXT 范围样式出处字段强制：TEXT 行必含「范围样式: 无 / 有 N 段+明细 / 范围样式未分解」
+            if is_text_row(row):
+                if not re.search(r'范围样式[:：]', rowtext):
+                    problems.append(base + ' 6i 量化表第' + str(n) + '行 TEXT 缺「范围样式」出处字段（characterStyleOverrides 读取痕迹必留——范围样式: 无 / 有 N 段+分段明细 / 范围样式未分解挂起；字段缺失 = 提取器未读源信号，压平为节点级单值后无从发现）')
+                elif re.search(r'\bmixed\b', rowtext) and not re.search(r'未分解', rowtext):
+                    problems.append(base + ' 6i 量化表第' + str(n) + '行 TEXT 填充 mixed 未按字符分段分解（逐段登记范围+色值+字重；无法分解登记「范围样式未分解」按人工补录挂起，禁止压平为节点级单一色值）: ' + rowtext[:60])
 
 cov = parse_table(section(text, '源节点覆盖对账'))
 if len(cov) > 1:
@@ -556,6 +595,84 @@ if [ -n "${REQUIRE_FINAL}" ]; then
       fail "$(basename "${p}") entry 含 unreachable（渲染态不可达 = 结构类复刻阻塞项，宪法第九节第 12 条）——定稿前消解：用户判定死页面剔除页面清单，或设计侧补入口经渲染验证后改真实到达值"
     fi
   done
+fi
+
+# ── 11) 回源抽验字段级 diff（--source-spot-check <REST nodes dump.json>，设计稿路线）──
+# 机械比对量化表出处字段 ↔ 源节点实况：isMask ↔「蒙版」字段、characterStyleOverrides ↔「范围样式」字段
+# dump = 调用方经 Figma REST GET /v1/files/:key/nodes?ids=... 产出（采样范围由 dump 定义的 node id 集决定）
+if [ -n "${SPOT}" ]; then
+  if ! spot_problems="$(python3 - "$DIR" "$SPOT" <<'PYEOF'
+import json, os, re, sys
+
+pack, dump_path = sys.argv[1], sys.argv[2]
+problems, compared = [], 0
+try:
+    dump = json.load(open(dump_path, encoding='utf-8')).get('nodes', {})
+except Exception as e:
+    print('SPOT-CHECK dump 解析失败（须为 Figma REST /nodes 响应 JSON）: ' + str(e)); sys.exit(0)
+
+def section(t, title):
+    m = re.search(r'^## ' + re.escape(title) + r'[^\n]*\n(.*?)(?=^## |\Z)', t, re.M | re.S)
+    return m.group(1) if m else ''
+
+def rows_of(sec):
+    rows = []
+    for line in sec.splitlines():
+        s = line.strip()
+        if not s.startswith('|'):
+            continue
+        tmp = s.replace('\\|', '\x00')
+        rows.append([c.replace('\x00', '\\|').strip() for c in tmp.strip('|').split('|')])
+    return [r for r in rows if not all(re.fullmatch(r'[-: ]*', c) for c in r)]
+
+pages_dir = os.path.join(pack, 'pages')
+if not os.path.isdir(pages_dir):
+    print('SPOT-CHECK 未找到 pages/ 目录'); sys.exit(0)
+for fn in sorted(os.listdir(pages_dir)):
+    if not fn.endswith('.md'):
+        continue
+    base = fn
+    text = open(os.path.join(pages_dir, fn), encoding='utf-8').read()
+    quant = rows_of(section(text, '节点样式量化表'))
+    if len(quant) < 2:
+        continue
+    for n, row in enumerate(quant[1:], start=2):
+        m = re.fullmatch(r'(\d+:[0-9A-Za-z]+)', row[0])
+        if not m:
+            continue  # 非节点 id 定位符（路径形态等）不入采样 diff
+        nid = m.group(1)
+        doc = (dump.get(nid) or {}).get('document')
+        if doc is None:
+            continue  # dump 未含该 id = 采样范围外
+        compared += 1
+        rowtext = ' '.join(row)
+        is_text = str(doc.get('type', '')) == 'TEXT'
+        src_mask = bool(doc.get('isMask', False))
+        reg_mask_yes = bool(re.search(r'蒙版[:：]\s*(是|alpha|luminance)', rowtext))
+        if src_mask != reg_mask_yes:
+            problems.append(base + ' spot-check 第' + str(n) + '行 蒙版出处与源不符: 源 isMask=' + str(src_mask).lower() + '，行登记「' + ('是' if reg_mask_yes else '无') + '」(node ' + nid + ')')
+        if is_text:
+            src_seg = bool(doc.get('characterStyleOverrides'))
+            reg_seg = re.search(r'范围样式[:：]\s*([^\s；;|]*)', rowtext)
+            reg_seg_v = reg_seg.group(1) if reg_seg else '<缺字段>'
+            if src_seg and reg_seg_v in ('无', '<缺字段>'):
+                problems.append(base + ' spot-check 第' + str(n) + '行 范围样式压平: 源 characterStyleOverrides 非空（存在分段样式），行登记「' + reg_seg_v + '」(node ' + nid + ')')
+            elif not src_seg and reg_seg_v.startswith('有'):
+                problems.append(base + ' spot-check 第' + str(n) + '行 范围样式虚登: 源 characterStyleOverrides 为空，行登记「' + reg_seg_v + '」(node ' + nid + ')')
+if compared == 0 and not problems:
+    print('SPOT-CHECK dump 与量化表无交集（检查 node id 采样范围）')
+for p_ in problems:
+    print(p_)
+PYEOF
+)"; then
+    fail "spot-check 校验器执行异常（fail-closed）"
+    spot_problems=""
+  fi
+  if [ -n "${spot_problems}" ]; then
+    while IFS= read -r _prob; do
+      [ -n "${_prob}" ] && fail "${_prob}"
+    done <<< "${spot_problems}"
+  fi
 fi
 
 # ── 结果 ──
