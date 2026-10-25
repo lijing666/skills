@@ -6,6 +6,7 @@
 #       页面跳号 / 页面缺锚点 / 缺 tokens / 非法 JSON / 引用素材不出清单 /
 #       icons.json svg 指向缺失 / 品牌字体缺字体文件条目 / 品牌字体有字体条目放行 /
 #       6c 素材与文案必备列 / 6d TEXT 文案位 / 6e 矢量素材引用 / 6f 账本处置态 / 6g 文案清单非空 / 6h 渐变完整性 /
+#       6i TEXT mixed 未分解拦截（已分段/未分解放行）/ 6j 蒙版行缺作用目标拦截（含作用于放行）/
 #       3c 真源指纹清单（--require-final 或 状态=可用）/
 #       3b assets.md 用途页面值域（画布名拦截 / p-xx·通用·豁免·人工补录放行）
 set -euo pipefail
@@ -348,11 +349,11 @@ entry: menu
 
 ## 节点样式量化表
 
-| 节点/父级路径 | 类型/名称 | 文案/字体排版 | 颜色/填充 | 素材/资产引用 | 量化 |
-|---|---|---|---|---|---|
-| 1:10 | TEXT | 欢迎来到鱼找找 \| PuHuiTi 36 w700 | #FFFFFF | — | x16 y20 |
-| 1:20 | IMAGE-SVG「Mask」 | — | 渐变: linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 255, 255, 0) 44%) | assets/hero.png | x0 y0 402×347 |
-| 1:30 | IMAGE-SVG「Icon」 | — | #0A84FF | icons/icon-001 | x18 y18 |
+| 节点/父级路径 | 类型/名称 | 文案/字体排版 | 颜色/填充 | 素材/资产引用 | 量化 | 源信号出处 |
+|---|---|---|---|---|---|---|
+| 1:10 | TEXT | 欢迎来到鱼找找 \| PuHuiTi 36 w700 | #FFFFFF | — | x16 y20 | 范围样式: 无；蒙版: 无 |
+| 1:20 | IMAGE-SVG「Cloud」 | — | 渐变: linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 255, 255, 0) 44%) | assets/hero.png | x0 y0 402×347 | 蒙版: 无 |
+| 1:30 | IMAGE-SVG「Icon」 | — | #0A84FF | icons/icon-001 | x18 y18 | 蒙版: 无 |
 
 ## 布局语义表
 
@@ -421,6 +422,46 @@ expect "6g：TEXT 行存在静态文案区空拦截" 1 "6g 量化表存在 TEXT 
 mk_quant_page "${WORK}/c43"
 sed 's/linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 255, 255, 0) 44%)/linear-gradient(176deg, rgba(188, 231, 254, 0.4) 17%, rgba(255, 25/' "${WORK}/c43/pages/p-01-login.md" > "${WORK}/c43/rm.tmp" && mv "${WORK}/c43/rm.tmp" "${WORK}/c43/pages/p-01-login.md"
 expect "6h：渐变截断拦截" 1 "6h 量化表第" "${WORK}/c43" --require-digest p-01
+
+# 场景50：6i TEXT 填充裸 mixed（无分段/未分解标记）→ 拦截
+mk_quant_page "${WORK}/c44"
+sed 's/| #FFFFFF |/| 填充:mixed |/' "${WORK}/c44/pages/p-01-login.md" > "${WORK}/c44/rm.tmp" && mv "${WORK}/c44/rm.tmp" "${WORK}/c44/pages/p-01-login.md"
+expect "6i：TEXT mixed 未分解拦截" 1 "6i 量化表第" "${WORK}/c44" --require-digest p-01
+
+# 场景51：6i mixed 显式登记「未分解」（合法挂起态）→ 放行
+mk_quant_page "${WORK}/c45"
+sed 's/| #FFFFFF |/| 填充:mixed 未分解（人工补录） |/' "${WORK}/c45/pages/p-01-login.md" > "${WORK}/c45/rm.tmp" && mv "${WORK}/c45/rm.tmp" "${WORK}/c45/pages/p-01-login.md"
+expect "6i：mixed 未分解登记放行" 0 "UI-PACK PASS" "${WORK}/c45" --require-digest p-01
+
+# 场景52：6j 蒙版行缺「作用于」目标 → 拦截
+mk_quant_page "${WORK}/c46"
+sed 's/^| 1:20 | IMAGE-SVG「Cloud」/| 1:20 | 蒙版（alpha）「Cloud」/' "${WORK}/c46/pages/p-01-login.md" > "${WORK}/c46/rm.tmp" && mv "${WORK}/c46/rm.tmp" "${WORK}/c46/pages/p-01-login.md"
+expect "6j：蒙版行缺作用目标拦截" 1 "6j 量化表第" "${WORK}/c46" --require-digest p-01
+
+# 场景53：6j 蒙版行登记作用目标 → 放行
+mk_quant_page "${WORK}/c47"
+sed -e 's/^| 1:20 | IMAGE-SVG「Cloud」/| 1:20 | 蒙版（alpha）「Cloud」/' -e 's/| x0 y0 402×347 |/| x0 y0 402×347；蒙版 → 作用于 1:15 编组 |/' "${WORK}/c47/pages/p-01-login.md" > "${WORK}/c47/rm.tmp" && mv "${WORK}/c47/rm.tmp" "${WORK}/c47/pages/p-01-login.md"
+expect "6j：蒙版行含作用目标放行" 0 "UI-PACK PASS" "${WORK}/c47" --require-digest p-01
+
+# 场景54：6i TEXT 行缺「范围样式」出处字段（读取痕迹缺失）→ 拦截
+mk_quant_page "${WORK}/c48"
+sed 's/范围样式: 无；蒙版: 无/蒙版: 无/' "${WORK}/c48/pages/p-01-login.md" > "${WORK}/c48/rm.tmp" && mv "${WORK}/c48/rm.tmp" "${WORK}/c48/pages/p-01-login.md"
+expect "6i：TEXT 缺范围样式出处字段拦截" 1 "6i 量化表第" "${WORK}/c48" --require-digest p-01
+
+# 场景55：6j 行缺「蒙版」出处字段 → 拦截
+mk_quant_page "${WORK}/c49"
+sed '/^| 1:30 /s/蒙版: 无 //' "${WORK}/c49/pages/p-01-login.md" > "${WORK}/c49/rm.tmp" && mv "${WORK}/c49/rm.tmp" "${WORK}/c49/pages/p-01-login.md"
+expect "6j：缺蒙版出处字段拦截" 1 "6j 量化表第" "${WORK}/c49" --require-digest p-01
+
+# 场景56：spot-check 出处字段与源一致 → 放行
+printf '%s' '{"nodes":{"1:10":{"document":{"id":"1:10","type":"TEXT","isMask":false,"characterStyleOverrides":[]}},"1:20":{"document":{"id":"1:20","type":"RECTANGLE","isMask":false}},"1:30":{"document":{"id":"1:30","type":"VECTOR","isMask":false}}}}' > "${WORK}/spot_ok.json"
+mk_quant_page "${WORK}/c50"
+expect "spot-check：字段与源一致放行" 0 "UI-PACK PASS" "${WORK}/c50" --source-spot-check "${WORK}/spot_ok.json"
+
+# 场景57：spot-check 不一致（isMask=true 行登无 + characterStyleOverrides 非空行登无）→ 拦截
+printf '%s' '{"nodes":{"1:10":{"document":{"id":"1:10","type":"TEXT","isMask":false,"characterStyleOverrides":[0]}},"1:20":{"document":{"id":"1:20","type":"RECTANGLE","isMask":true}}}}' > "${WORK}/spot_bad.json"
+mk_quant_page "${WORK}/c51"
+expect "spot-check：蒙版+范围样式两处失真拦截" 1 "spot-check 第" "${WORK}/c51" --source-spot-check "${WORK}/spot_bad.json"
 
 # ── 3b assets.md 用途页面列值域（宪法第九节第 10 条，默认模式包级）──
 
