@@ -31,7 +31,7 @@ skills/
 # 只同步 jjspec（默认）
 ./sync.sh
 
-# 同步全部技能（jjspec + jjfullstack + jjagent + jjpr，技能维护者用）
+# 同步全部技能（动态收集仓库内全部技能目录，含 jjtest；技能维护者用）
 ./sync.sh all
 
 # 只同步指定技能
