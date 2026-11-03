@@ -50,6 +50,7 @@ skills/
 | WorkBuddy | `~/.workbuddy/skills/` |
 | CodeBuddy | `~/.codebuddy/skills/`（官方文档：用户级自定义 Skills 目录，装完用 /skills 验证加载） |
 | Trae CN | `~/.trae-cn/skills/` |
+| Codex | `~/.codex/skills/` |
 
 > 各工具对 skill 的加载方式可能略有差异，同步后请在该工具内确认技能可被识别（CodeBuddy 用 /skills 查看；Trae CN 重启后生效）。
 
