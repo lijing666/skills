@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.17.8
+  version: 1.18.0
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -96,12 +96,14 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 | `references/feedback-loop.md` | 步骤 ⑨ 及每次 AI 出错后 |
 | `references/evaluation.md` | 模型升级/换宿主/大改规则资产前；月度体系级复盘 |
 
+**跨技能委托（存在检测 + 委托，禁止复述对方判据）**：E2E 冒烟工程判据/契约四层执法/测试地图 → `jjtest` 技能（触发词：搭 E2E/契约测试/测试地图/flaky 治理；单源归属表见其 `references/scope-boundary.md`）。jjspec 侧消费位：onboarding 体检存在检测行、gates.md 发布证据包 E2E 证据行委托指针。jjtest 未安装 = 相关判据不生效、缺口显式留痕。
+
 ## 执法物料包（直接落进目标项目，不是"读"是"用"）
 
 - `assets/AGENTS.md.template`：根级（六区块）+ 模块级模板，规则带 R 编号与违反后果
 - `assets/extract-boundary.sh`：边界提取层——自动扫描进行中任务卡（```boundary 围栏 + `## 边界` 列表双格式），白名单 = 在场卡（本次 diff 新建/修改的卡）边界并集 + 豁免段；内置 fail-closed 裁决（非豁免文件缺卡覆盖/在场卡未声明边界即失败）。CI 零手改，免手工指定任务卡路径
 - `assets/boundary-check.sh`：越界检测——diff 对照边界文件（由 extract-boundary.sh 生成），超出即失败（fail-closed；回归测试 `boundary-check.test.sh`）
-- `assets/release-evidence.sh`：发布证据包聚合器——发布门（⑧灰度开启前）/观测期拍板门（⑨到期）的证据一页汇总：AC 覆盖账本、高危卡变异存活率、集成标记条目、HLD 观测声明对账 + **采集落点认领机械执法**（拆卡规则 10 的机器对账）；缺口显影，`--strict` 有缺口 exit 1；产物贴 PR 描述/发布记录（一次性数据非台账）；E2E 冒烟证据行格式正源 gates.md 发布证据包节（回归测试 `release-evidence.test.sh`）
+- `assets/release-evidence.sh`：发布证据包聚合器——发布门（⑧灰度开启前）/观测期拍板门（⑨到期）的证据一页汇总：AC 覆盖账本、高危卡变异存活率、集成标记条目、HLD 观测声明对账 + **采集落点认领机械执法**（拆卡规则 10 的机器对账）；缺口显影，`--strict` 有缺口 exit 1；产物贴 PR 描述/发布记录（一次性数据非台账）；⑥ E2E 冒烟与 ⑦ 契约校验证据行聚合（格式正源 gates.md 发布证据包节，显式豁免合法挂起；生产判据 = jjtest）（回归测试 `release-evidence.test.sh`）
 - `assets/mutation-gate.sh`：断言强度门禁——变异引擎自动注入变体验证测试有效性，仅对 `risk: high` 在场卡执法（纯高危起步）：存活率超阈值 / 引擎失败 / 超时 / 零变体 / 报告缺失均 fail-closed，`engine: 无（理由）` 显式豁免警告放行；登记块在项目 AGENTS.md（模板 assets/AGENTS.md.template），基线启用日期前只记录不阻断；判据正源 gates.md 断言强度门禁节（回归测试 `mutation-gate.test.sh`）
 - `assets/risk-zone-check.sh`：风险区门禁——触碰 AGENTS.md 风险区清单的 commit 须带 `[risk-ok: @<批准人>]` 标记（人批准留痕；裸标记/占位符无效，与 author 同名即拦），无标记即失败（fail-closed；回归测试 `risk-zone-check.test.sh`）
 - `assets/ac-coverage-check.sh`：测试对应性门禁——diff 触碰行为文件（非豁免且非测试文件）时，覆盖卡必须声明 `## 测试文件清单`（taskcard-template 定义格式）；清单条目格式非法/悬空/非测试文件、spec_ac 幻觉引用均失败（fail-closed；回归测试 `ac-coverage-check.test.sh`）。测试文件识别内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell 与测试目录段），`--test-glob` 追加项目特有布局；`--integration-mark` 开关启用真实性执法（默认关，现有项目零影响）——项目 AGENTS.md 登记标记约定后，risk: high 行为卡清单须含 ≥1 个带标记的集成测试条目（高危卡天生碰真依赖，全 mock 的绿是假的；判据见 gates.md 第二层）

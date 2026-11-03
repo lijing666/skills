@@ -1,0 +1,47 @@
+# github-actions-e2e-smoke.yml — E2E 冒烟 CI 模板（jjtest 物料，判据 = references/e2e-guide.md）
+#
+# 定位：模板物料非开箱即用——runner/驱动/环境准备按项目栈替换；旅程清单以 e2e/journeys/ 为正源。
+# 判据锚点（e2e-guide 三上下文执行矩阵）：
+#   PR 级可选（本文件）｜发布门必跑（不在 CI——由 release-evidence.sh 聚合 ⑥ 证据行，--strict 拦缺口）
+# 硬口径：
+#   ① 只跑固化后的确定性脚本，禁止执行态探索（e2e-guide 探索纪律坑 1）
+#   ② 失败报告四要素：步骤×断言×env 摘录×现场证据——缺一 = 执行无效
+#   ③ 重试策略显式声明，只重试归因为环境抖动的失败（失败诊断 SOP）
+#   ④ 证据行格式正源 = jjspec gates.md 发布证据包 ⑥：e2e-smoke <通过>/<总> PASS（命令:<可复跑命令>）
+
+name: e2e-smoke
+on:
+  pull_request:
+    # 冒烟分钟级 + 需环境；PR 级可选，项目按反馈速度（AL2 口径）决定是否全 PR 触发
+    paths:
+      - 'e2e/**'
+      - 'src/**'             # 行为文件变更触发（目录按项目实际改）
+
+jobs:
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 部署 preview（与灰度目标环境口径一致——环境错位 = 假结果）
+        run: |
+          echo "TODO: 项目替换 preview 部署命令；env.json sidecar（baseUrl/env/账号池/seedVersion/runnerVersion）随报告落盘"
+      - name: 数据初始化（每旅程独立种子，禁共享可变状态）
+        run: |
+          echo "TODO: 项目替换数据初始化/清理命令"
+
+      - name: 执行冒烟（重试策略须显式声明于执行配置）
+        run: |
+          # 替换为项目 runner，如：npx playwright test e2e/ --reporter=json --output=e2e/reports/
+          echo "TODO: 项目替换冒烟执行命令"
+
+      - name: 失败证据物化（四要素，上传 artifacts 可追溯）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-evidence
+          path: e2e/reports/
+
+      - name: 产出证据行
+        run: |
+          # 登记于任务卡执行进度；发布门 release-evidence.sh 从需求目录 md 聚合 ⑥ 行
+          echo "TODO: 解析报告输出 e2e-smoke <通过>/<总> PASS（命令:<可复跑命令>）"

@@ -1,0 +1,52 @@
+# github-actions-contract.yml — 契约三层门禁 CI 模板（jjtest 物料，判据 = references/contract-gates.md）
+#
+# 定位：模板物料非开箱即用——runner 命令（spectral/oasdiff/dredd 或自研）按项目栈替换，
+#   接口清单与「核心接口」分级以项目仓 quality/test-map.md「接口契约」节为唯一来源。
+# 判据锚点（三层，缺位的层须在测试地图登记缺口）：
+#   静态检查 → 必须；契约漂移（破坏性变更识别）→ 必须；运行时校验（核心接口 + 关键错误响应）→ 核心接口必须
+# 红线：破坏性变更须走契约修订流程（jjspec Spec 层），本 CI 拦的是「未走流程的漂移」。
+
+name: contract-gates
+on:
+  pull_request:
+    paths:
+      - 'contract/**'        # 契约正源目录（jjspec 单源四件套，落点按项目实际改）
+      - 'api/**'             # 实现侧（漂移对账另一半）
+      - 'quality/test-map.md'
+
+jobs:
+  contract-static:           # 层一：静态检查（秒级，随 lint 层）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OpenAPI 静态校验（结构/必填/类型/重复定义）
+        run: |
+          # 替换为项目选型，如：npx @redocly/cli lint contract/openapi.yaml --skip-rule=no-empty-servers
+          echo "TODO: 项目替换静态检查命令（spectral/redocly 等）"
+
+  contract-drift:            # 层二：契约漂移（分钟级，PR diff 触发）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # 漂移对账需 diff 基线
+      - name: 破坏性变更识别
+        run: |
+          # 替换为项目选型，如：npx oasdiff breaking contract/openapi.yaml "$(git rev-parse origin/main:contract/openapi.yaml)" --fail-on ERR
+          echo "TODO: 项目替换漂移检查命令（oasdiff 等）；breaking 命中 = 走 jjspec 契约修订流程，非改测试"
+
+  contract-runtime:          # 层三：运行时校验（核心接口必须；需可运行环境）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 部署 preview 并执行运行时契约校验
+        run: |
+          # 替换为项目实现：起 preview → 对核心接口发真实请求 → 响应 diff 契约（含关键错误响应）
+          # 环境口径：preview 须与灰度目标环境一致（同 e2e-guide 环境契约纪律）
+          echo "TODO: 项目替换运行时校验命令"
+      - name: 产出证据行
+        run: |
+          # 证据行格式正源 = jjspec gates.md 发布证据包 ⑦：
+          #   contract-check <静态 n 项|漂移 0 breaking|运行时 m/k 接口> PASS（命令:<可复跑命令>）
+          # 登记于任务卡执行进度（发布门由 release-evidence.sh 聚合，--strict 拦缺口）
+          echo "TODO: 输出并登记 contract-check 证据行"

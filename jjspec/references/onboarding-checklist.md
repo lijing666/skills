@@ -23,6 +23,7 @@
 | 测试对应性检查？ | 改行为代码必须给出 AC↔测试对应——装 assets/ac-coverage-check.sh（P1，开箱）：卡声明 ## 测试文件清单 + spec_ac 校验（taskcard-template 定义格式）；断言语义对应仍归人审三焦点 |
 | 断言强度门禁？ | 项目将产出 risk: high 卡 → AGENTS.md 登记 mutation-engine 块（格式见 assets/AGENTS.md.template / mutation-gate.sh）+ CI 装 assets/mutation-gate.sh（P1）；暂无引擎可先写 engine: 无（理由）显式豁免攒基线，后补登记启用拦截——高危卡在场而缺登记块 CI 即失败（fail-closed）；纯资产（md/图片等交付工件）不计入行为文件、不触发（需求工件仓与实现仓分离时，三判据在实现仓 diff 上生效） |
 | 集成测试环境？ | risk: high 卡需真依赖验证 → CI runner 有 docker/testcontainers 可用？AGENTS.md 登记 integration-mark 块（assets/AGENTS.md.template）→ ac-coverage-check --integration-mark 启用执法；未登记 = 该判据不生效（缺口显式留痕，不假装有）——本地跑不了集成测试时材料包第三件显式登记"未在本地执行，待 CI" |
+| 测试地图与 E2E/契约执法？（jjtest 存在检测） | 项目仓 `quality/test-map.md` 在场且过 `test-map-check.sh`（jjtest 物料）？E2E 冒烟脚本/运行时契约校验能力可用？——只做存在检测，地图内容与工程判据归 jjtest（未安装 jjtest = 本项判据不生效，缺口显式留痕；发布门 E2E 证据行格式仍按 gates.md 发布证据包节独立使用） |
 | UI 执法脚本落位？（适用 UI 规范管线项目） | 使用 jjspec UI 规范管线的项目，门禁脚本**必须落项目副本**（技能库是本机私有仓库，CI/协作者环境拿不到）：`page-excerpt-check.sh`、`task-done-gate.sh`、`pixel-diff.mjs`、`ui-pack-check.sh`、`menu-recon-check.sh` 拷入项目 `tools/ci/`，**副本头部登记来源版本戳**（拷自技能库 commit 短 hash，技能库升级后重拷防双源漂移），CI 挂载 `--diff` 批量模式（在场卡对账打回）；`tools/ci/**` 属项目风险区的，拷贝动作 AI 执行、commit 按该项目 AGENTS.md 走 `[risk-ok: @<批准人>]`。已接入项目在下次体检时补落——缺副本 = 视觉验收/摘录对账仅靠 AI 自觉跑单卡模式，机械闭环破口 |
 | 反馈速度？ | 单测能否秒级/分钟级跑完？不能 → AL2 模式暂不可用，先补 |
 

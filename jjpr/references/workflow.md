@@ -105,7 +105,13 @@ jjpr gh pr checks <PR号>
 jjpr gh pr view <PR号>
 ```
 
-- CI 失败且因本变更：诊断、修复、`jjpr push` 重推、汇报改了什么。
+- CI 失败且因本变更：诊断、修复、重推、汇报改了什么。
+- **重触发（retrigger）与内容提交分离**——重新点燃 CI 按序选路，所选路径与失败原因须向用户播报（重试权不在手时禁止自行换路）：
+  1. `jjpr gh run rerun <run-id>`——被拒（如 "workflow file may be broken"）即记录原因转下一条，不反复重试；
+  2. `jjpr gh workflow run <workflow> --ref <分支>`——注意 if 条件过滤：触发条件限定 `push`/`pull_request` 的 job 在 `workflow_dispatch` 上下文会被整体跳过，不适用即换下一条；
+  3. 空提交扳机：`git commit --allow-empty -m "ci: retrigger <原因>"` + `jjpr push`。
+  扳机一律空提交；卡片/PRD/状态等文档增量按阶段收口攒批提交，禁止卷进重跑提交（反例：一次交付因逐轮重跑拆出 4 个 docs 碎提交，且末次续接区更新漏在工作区未提交）。
+- **推送输出即事实**——本应 fast-forward 的推送出现 `[new branch]` 等异常即停，`git ls-remote` 对账远端 sha；head 分支可能已被「PR 合并 + 删源分支」改变状态，推送前先核对 PR 状态可避免误建孤儿分支。
 - 评审意见可执行：落实后重跑相关检查再重推。
 - 每次重推后，视为此前的人工批准可能需要刷新（部分仓库要求批准
   最新提交）。

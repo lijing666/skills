@@ -64,6 +64,8 @@ status: done
 
 ## 执行进度
 - 验证证据:mutation-gate 存活率 18% ≤ 30% PASS
+- e2e-smoke 3/3 PASS（命令:make e2e-smoke ENV=preview）
+- contract-check 静态 12 项|漂移 0 breaking|运行时 5/5 PASS（命令:make contract-check ENV=staging）
 EOF
 printf 'import pytest\n\n@pytest.mark.integration\ndef test_x():\n    assert True\n' > tests/test_payment_integration.py
 cat > AGENTS.md <<'EOF'
@@ -107,6 +109,12 @@ echo "## 验收标准\n(无 AC)" > changes/R1/spec.md
 expect "spec无AC缺口" 0 "无 AC 定义" changes/R1
 mv "${WORK}/spec.bak" changes/R1/spec.md
 
+# 场景7b：spec 有 GWT 但无 AC 编号（格式走样）→ 区分报错指向 spec-template
+mv changes/R1/spec.md "${WORK}/spec.bak"
+printf '## 验收标准（GWT）\n1. Given 正确 key When POST /api/auth/token Then 200\n2. Given 错误 key When POST Then 401\n' > changes/R1/spec.md
+expect "GWT无编号区分报错" 0 "偏离 spec-template" changes/R1
+mv "${WORK}/spec.bak" changes/R1/spec.md
+
 # 场景8：--strict + 缺口（重新制造一个缺口）→ exit 1
 perl -0pi -e 's/- 验证证据:mutation-gate 存活率 18% ≤ 30% PASS\n//' changes/R1/tasks/TASK-001.md
 expect "strict 缺口拦截" 1 "缺口(--strict)" changes/R1 --strict
@@ -114,6 +122,19 @@ expect "strict 缺口拦截" 1 "缺口(--strict)" changes/R1 --strict
 # 场景9：--strict + 完整 → exit 0
 perl -0pi -e 's/(## 执行进度\n)/$1- 验证证据:mutation-gate 存活率 18% ≤ 30% PASS\n/' changes/R1/tasks/TASK-001.md
 expect "strict 完整放行" 0 "证据包生成完成" changes/R1 --strict
+
+# 场景10：E2E 证据行换显式豁免 → 合法挂起形态（无 E2E 缺口）
+perl -0pi -e 's/- e2e-smoke 3\/3 PASS（命令:make e2e-smoke ENV=preview）\n/- e2e-smoke: 豁免——纯 API 需求无界面触点，测试地图接口契约节已登记\n/' changes/R1/tasks/TASK-001.md
+expect "E2E 显式豁免放行" 0 "显式豁免" changes/R1
+expect "E2E 豁免无缺口" 0 "证据包生成完成" changes/R1 --strict
+perl -0pi -e 's/- e2e-smoke: 豁免——纯 API 需求无界面触点，测试地图接口契约节已登记\n/- e2e-smoke 3\/3 PASS（命令:make e2e-smoke ENV=preview）\n/' changes/R1/tasks/TASK-001.md
+
+# 场景11：⑥⑦ 证据行全删且无豁免 → 双缺口显影（非 strict）+ strict 拦截
+perl -0pi -e 's/- e2e-smoke 3\/3 PASS（命令:make e2e-smoke ENV=preview）\n//' changes/R1/tasks/TASK-001.md
+perl -0pi -e 's/- contract-check 静态 12 项\|漂移 0 breaking\|运行时 5\/5 PASS（命令:make contract-check ENV=staging）\n//' changes/R1/tasks/TASK-001.md
+expect "双证据行缺失显影" 0 "无 e2e-smoke 证据行" changes/R1
+expect "契约缺失显影" 0 "无 contract-check 证据行" changes/R1
+expect "双证据行缺失 strict 拦截" 1 "缺口(--strict)" changes/R1 --strict
 
 if [ "${FAILED}" -eq 0 ]; then
   echo "ALL PASS"

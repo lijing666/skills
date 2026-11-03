@@ -222,6 +222,7 @@ applies_to: jjfullstack skill（判定基线 v2.4.0）· jjagent skill（判定�
 - **形态基线表无"单平台小程序"行**：CANARY-3 走退化程序时无可取基线默认值，按"判据优先级链走到底 → 取官方工程规范默认 + 落 TDR（含投降条件）"处理视为通过。若后续给基线表补该行，同步更新本条与 CANARY-3 预期描述。
 
 - **CANARY-S3 未覆盖 Figma 设计稿路线**：S3 走 HTML 路线；characters 机械提取、node id 锚点、nodes 端点 lastModified 读取等 Figma 特有面未被场景触达——待真实 Figma 案例积累后补 S4 或替换（yzz-miniprogram 项目 v0.1.1 修复过程已具场景素材价值）。另：S3 首跑暴露 4 类格式走样——缺口 1–3（README 资产类别登记的精确节名/15 类行名/逐类处置约束、icons.json svg 字段为相对 icons/ 目录文件名、tokens 文件包内恰好 1 个 + json 双引号串触发字体误报）已由 jjspec v1.11.1 在 ui-spec-guide 补显式定义消解；第 4 类（source_anchor/统计行格式）经复核 guide 原文已有，属长段落埋没漏读——v1.11.1 同步将页面 frontmatter 必填字段改为集中登记（防再犯）。
+- **金丝雀测试案例集缺口：jjtest 场景（编号 S5）尚未收录（分组Agent 预演已完成，素材已备）**：jjtest v0.1.0 判据结构已完整（测试地图/生成流水线/执行编排/契约四层/证据行并入发布证据包/CI 模板），但案例集里还没有考它的场景——需要补一道：构造 2 业务域样例项目（1 组 OpenAPI + 3 旅程 spec AC + 无测试现状），第一幕「测试盘点」产 test-map 过 test-map-check（含缺口显式登记形态）；第二幕生成双通道（直译 + computer use 探索草稿人审固化，验证探索三坑拦截）+ 执行编排（红基线/证据四要素/豁免口径）；第三幕契约漂移触发（改字段类型不走修订，release-evidence --strict 聚合 ⑥⑦ 拦截）。分组Agent 预演留痕（/tmp/s5-dryrun/）已验证三幕判据可跑并暴露 5 个规则缺口（已修）——案例补录时以此为首跑底稿。案例未补期间 jjtest 判据为纸面判据（同 S3 收录前 jjspec UI 管线状态），执行时按纸面纪律 + 人审兜底。
 
 ## 6. 执行记录
 

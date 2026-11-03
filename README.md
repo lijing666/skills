@@ -11,6 +11,7 @@
 ```
 skills/
 ├── jjspec/          # AI 架构师工作流 skill（需求 Spec / 架构 / 任务卡 / 九步 SOP）
+├── jjtest/          # AI 产品测试与质量保障 skill（测试地图盘点 / E2E 冒烟工程化 / 契约四层执法 / 分期质量建设——证明交付物可用）
 ├── jjfullstack/     # 多端全栈架构规则库（规则库非流程包：选型程序 / 复用分层 / 契约 BFF / 端能力 Adapter / HLD 注入）
 ├── jjagent/         # Agent 产线架构规则库（规则库非流程包：确定性优先 / 状态机 / LLM 网关 / 流式 / 评测 / 数据安全 / RAG 工具——Agent 需求 HLD 注入 + Agent 项目接入体检）
 ├── jjpr/            # GitHub App 身份推送/建 PR skill（bash + PowerShell 双实现）
@@ -66,6 +67,7 @@ skills/
 | 多模块需求分册（PRD 分册） | 主指令：「用 jjspec 多模块需求 / 分册需求：<产品名>」（主 prd.md + prd-<序号>-<模块>.md 分册，spec/hld 仍单文件）；偶用迁移：「用 jjspec 拆分需求：<产品名>」把存量单文件 PRD 迁移拆分（均停在定稿前） |
 | 存量项目改造 | 「用 jjspec 改造 /path/to/项目」（走体检起步，渐进治理） |
 | 体系变更评估 | 「换模型/换 AI 工具了，先跑金丝雀任务集验证体系」（换模型/换宿主/大改规则前必做） |
+| 测试与质量建设（jjtest，三步走） | ①「用 jjtest 给 /path/to/项目 做测试盘点」→ 停靠确认风险排序与分期范围<br>②「用 jjspec 增加需求：\<需求名\>（分期计划见 quality/test-map.md）」→ 九步 SOP 推进，停靠点你只做决策：定稿→批准→继续→人审<br>③ 发布时「用 jjspec 生成 changes/\<需求ID\> 的发布证据包」→ 聚合 ⑥⑦ 证据行，`--strict` 有缺口即拦 |
 | 多端架构设计 | 「用 jjfullstack 设计 /path/to/项目 的多端架构」（触达小程序/移动端或多端选型时，产出 HLD 章节） |
 | 项目架构体检 | 「用 jjfullstack 给 /path/to/项目 做架构体检」（逐规则五态比对，产出 AGENTS.md 规则补丁） |
 | 跨端技术选型 | 「用 jjfullstack 选型：uni-app x / Taro / Flutter / RN / KMP 怎么选」（四步选型程序，可产出 TDR） |
@@ -75,7 +77,7 @@ skills/
 | UI 设计规范生成（HTML 原型 / Figma 设计稿） | 「用 jjspec 生成 UI 规范 <产品名>（附 HTML 原型或 Figma 地址）」（机械提取产四件套落 `ui-specs/`，对账清单停在确认前；HTML 路线基准实跑渲染、像素级验收，设计稿路线规格逐项量化断言） |
 | 需求与 UI 规范绑定 | 「用 jjspec 绑定 UI 规范 <产品名>（需求 <需求名> 与 UI 规范 <规范名>）」（AI 识别页面↔REQ 映射逐条带证据，确认后回填 PRD「UI 真源」列，PRD 版本 +1 回评审中） |
 
-人工介入点只有三处：**方案批准三查、任务卡粒度调整、风险区人审**。
+人工介入点只有四处：**测试分期范围确认（jjtest）、方案批准三查、任务卡粒度调整、风险区人审**。
 
 > 原则：机制归 skill，内容归项目——AGENTS.md/ADR/回流表落在被操作的项目里，本仓库只存方法论。
 

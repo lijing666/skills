@@ -3,8 +3,10 @@
 #
 # 职责:把散落正源的机械证据聚合成一页,给人守发布门(⑧灰度开启前)与观测期拍板门(⑨到期)的人看。
 #   全部从既有正源机械汇总,零新增填写:① AC 覆盖账本(spec+卡验收节) ② 高危卡强度(变异存活率行)
-#   ③ 真实性(集成标记条目) ④ 观测声明对账(HLD 观测节完整性+采集落点认领=拆卡规则 10 机械对账)。
-#   缺口显影:AC 无证据/无认领、高危卡缺变异行、观测节缺失或留白、落点无卡认领 → 进缺口清单。
+#   ③ 真实性(集成标记条目) ④ 观测声明对账(HLD 观测节完整性+采集落点认领=拆卡规则 10 机械对账)
+#   ⑤ 开关与灰度摘要 ⑥ E2E 冒烟证据行 ⑦ 契约校验证据行(格式正源 gates.md 发布证据包节;生产判据 = jjtest)。
+#   缺口显影:AC 无证据/无认领、高危卡缺变异行、观测节缺失或留白、落点无卡认领、
+#   E2E/契约证据行缺失且无显式豁免 → 进缺口清单(豁免形态:`e2e-smoke: 豁免——<理由>` 同款 contract-check)。
 #
 # 落盘纪律:输出物是发布动作的一次性数据(贴 PR 描述/发布记录),不是台账——禁止长期登记(R0)。
 #
@@ -72,7 +74,11 @@ echo ""
 echo "## ① AC 覆盖账本"
 if [ ! -s "${WORK}/acs" ]; then
   echo "⚠️ spec.md 未提取到 AC 编号——AC 是证据链源头"
-  gap "[spec] 无 AC 定义(AC-?编号格式)"
+  if grep -qE 'Given|When|Then' "${SPEC}"; then
+    gap "[spec] 检测到 GWT 验收标准但无 AC 编号——编号格式偏离 spec-template（- AC1: 形态），回 Spec 层补编号（下游 spec_ac/测试文件清单/旅程引用全依赖编号体系，不可用行号兜底）"
+  else
+    gap "[spec] 无 AC 定义(AC-?编号格式)"
+  fi
 else
   echo "| AC | 认领卡 | 验收证据 |"
   echo "|---|---|---|"
@@ -172,7 +178,7 @@ fi
 echo ""
 } >> "${EV}"
 
-# ── ⑤ 开关与灰度 + 缺口清单 ──
+# ── ⑤ 开关与灰度 ──
 {
 echo "## ⑤ 开关与灰度"
 if [ -f "${HLD}" ]; then
@@ -181,9 +187,42 @@ else
   echo "  (HLD 缺失,见缺口)"
 fi
 echo ""
+} >> "${EV}"
+
+# ── ⑥⑦ E2E 冒烟 + 契约校验证据行(格式正源 gates.md 发布证据包节;生产判据 = jjtest e2e-guide/contract-gates)──
+# 采集范围 = 需求目录全部 md(证据行登记于卡执行进度或发布记录摘录);显式豁免 = 合法挂起形态(理由随人审)
+{
+echo "## ⑥ E2E 冒烟证据"
+evi="$(grep -rhoE 'e2e-smoke .+PASS.*命令' "${DIR}" --include='*.md' 2>/dev/null | head -1 || true)"
+exm="$(grep -rhoE 'e2e-smoke(：|:)[[:space:]]*豁免——.+' "${DIR}" --include='*.md' 2>/dev/null | head -1 || true)"
+if [ -n "${evi}" ]; then
+  echo "- ${evi}"
+elif [ -n "${exm}" ]; then
+  echo "- ${exm}(显式豁免,理由随人审)"
+else
+  echo "- 未登记"
+  gap "[E2E] 无 e2e-smoke 证据行亦无显式豁免——冒烟未跑或未登记(验收能力缺失禁以现成必过检查顶替;格式见 gates.md 发布证据包节)"
+fi
+echo ""
+echo "## ⑦ 契约校验证据"
+cevi="$(grep -rhoE 'contract-check .+PASS.*命令' "${DIR}" --include='*.md' 2>/dev/null | head -1 || true)"
+cexm="$(grep -rhoE 'contract-check(：|:)[[:space:]]*豁免——.+' "${DIR}" --include='*.md' 2>/dev/null | head -1 || true)"
+if [ -n "${cevi}" ]; then
+  echo "- ${cevi}"
+elif [ -n "${cexm}" ]; then
+  echo "- ${cexm}(显式豁免,理由随人审)"
+else
+  echo "- 未登记"
+  gap "[契约] 无 contract-check 证据行亦无显式豁免——契约未执行验证或未登记(格式见 gates.md 发布证据包节;生产判据 = jjtest contract-gates)"
+fi
+echo ""
+} >> "${EV}"
+
+# ── 缺口清单 ──
+{
 echo "## 缺口清单"
 if [ "${GAPS}" -eq 0 ]; then
-  echo "无——证据链完整(AC 覆盖/强度/真实性/观测声明对账均闭合)"
+  echo "无——证据链完整(AC 覆盖/强度/真实性/观测声明对账/双证据行均闭合)"
 else
   echo "共 ${GAPS} 项缺口,逐条见上"
 fi
