@@ -463,6 +463,31 @@ printf '%s' '{"nodes":{"1:10":{"document":{"id":"1:10","type":"TEXT","isMask":fa
 mk_quant_page "${WORK}/c51"
 expect "spot-check：蒙版+范围样式两处失真拦截" 1 "spot-check 第" "${WORK}/c51" --source-spot-check "${WORK}/spot_bad.json"
 
+# ── 6i/6j 路线判定（source_anchor 主判定 + manifest source_type 互证）──
+
+# 场景58：draft 无 manifest 的设计稿页（source_anchor 判 figma）缺出处字段 → 6i 仍拦截
+#   （fail-open 修复回归锚：旧版按 manifest file_key 判定，无 manifest 即静默跳过 6i/6j）
+mk_quant_page "${WORK}/c52"
+rm -f "${WORK}/c52/source-manifest.json"
+sed 's/范围样式: 无；蒙版: 无/蒙版: 无/' "${WORK}/c52/pages/p-01-login.md" > "${WORK}/c52/rm.tmp" && mv "${WORK}/c52/rm.tmp" "${WORK}/c52/pages/p-01-login.md"
+expect "6i：无 manifest 时 source_anchor 判定仍拦截" 1 "6i 量化表第" "${WORK}/c52" --require-digest p-01
+
+# 场景59：页面 source_anchor(figma) 与 manifest source_type(html) 矛盾 → 拦截
+mk_quant_page "${WORK}/c53"
+printf '{"source_type":"html","files":[{"path":"prototype/p-01.html","hash":"x"}]}' > "${WORK}/c53/source-manifest.json"
+expect "路线互证：figma 页与 html manifest 矛盾拦截" 1 "路线判定矛盾" "${WORK}/c53" --require-digest p-01
+
+# 场景60：页面 source_anchor(html) 与 manifest source_type(figma) 矛盾 → 拦截
+mk_quant_page "${WORK}/c54"
+sed 's/source_anchor: figma 1:2/source_anchor: html prototype\/p-01-login.html/' "${WORK}/c54/pages/p-01-login.md" > "${WORK}/c54/rm.tmp" && mv "${WORK}/c54/rm.tmp" "${WORK}/c54/pages/p-01-login.md"
+expect "路线互证：html 页与 figma manifest 矛盾拦截" 1 "路线判定矛盾" "${WORK}/c54" --require-digest p-01
+
+# 场景61：html 页 + html manifest → 6i/6j 不波及 HTML 路线 → 放行
+mk_quant_page "${WORK}/c55"
+sed 's/source_anchor: figma 1:2/source_anchor: html prototype\/p-01-login.html/' "${WORK}/c55/pages/p-01-login.md" > "${WORK}/c55/rm.tmp" && mv "${WORK}/c55/rm.tmp" "${WORK}/c55/pages/p-01-login.md"
+printf '{"source_type":"html","files":[{"path":"prototype/p-01.html","hash":"x"}]}' > "${WORK}/c55/source-manifest.json"
+expect "HTML 路线：6i/6j 不生效放行" 0 "UI-PACK PASS" "${WORK}/c55" --require-digest p-01
+
 # ── 3b assets.md 用途页面列值域（宪法第九节第 10 条，默认模式包级）──
 
 # 场景49：已导出条目用途页面登记画布名 → 拦截

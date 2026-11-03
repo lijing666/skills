@@ -43,6 +43,8 @@
 #           mixed 无「未分解」标记仍拦；压平 = 读了源却写节点级单值，包内无痕迹，由 --source-spot-check 回源 diff 证伪）
 #        6j 蒙版出处字段强制（设计稿路线每行必含「蒙版: 无|是(alpha/luminance)→作用于 <目标>」——缺失即拦；
 #           值非「无」而缺「作用于」仍拦）
+#        6i/6j 路线判定：主判定 = 页面 frontmatter source_anchor 逐页判 figma（digest 期即在场，不依赖
+#           source-manifest——3c 下 draft 不强制 manifest）；manifest 在场时 source_type 互证，矛盾即拦
 #   11. 回源抽验字段级 diff（--source-spot-check <REST nodes dump.json>，设计稿路线）：
 #       机械比对量化表出处字段 ↔ 源节点 characterStyleOverrides/isMask 实况，不一致即拦——
 #       抽验从人工找差异变字段 diff（dump = 调用方经 Figma REST GET /v1/files/:key/nodes 产出，采样范围由 dump 定义）
@@ -343,13 +345,30 @@ def is_material(row):
 def is_text_row(row):
     return type_i >= 0 and type_i < len(row) and row[type_i].strip().startswith('TEXT')
 
-is_figma = False
+# 路线判定（6i/6j 作用域）：主判定 = 页面 frontmatter source_anchor（逐页、digest 期即在场，
+# 与 task-done-gate 同一信号——不依赖 source-manifest：3c 条款下 draft 不强制 manifest，
+# 旧版按 manifest file_key 判定致 digest 期设计稿页静默跳过 6i/6j，属 fail-open 已修）；
+# manifest 在场时以 source_type 互证，与页面路线矛盾 = 数据不一致，fail-closed；
+# source_anchor 缺失时 fallback manifest source_type（两者皆缺 = 路线未知，6i/6j 不生效，
+# source_anchor 必填性由本脚本第 5 校验「每页含 source_anchor」另行把关）
 _mf = os.path.join(pack, 'source-manifest.json')
+_fm = text.split('---', 2)[1] if text.startswith('---') else ''
+_m = re.search(r'^source_anchor:\s*(.+)$', _fm, re.M)
+_sa = _m.group(1).strip().lower() if _m else ''
+_mt = None
 if os.path.exists(_mf):
     try:
-        is_figma = bool(json.load(open(_mf, encoding='utf-8')).get('file_key'))
+        _mt = json.load(open(_mf, encoding='utf-8')).get('source_type')
     except Exception:
         pass
+if 'figma' in _sa:
+    is_figma = True
+elif 'html' in _sa:
+    is_figma = False
+else:
+    is_figma = (_mt == 'figma')
+if _mt in ('figma', 'html') and ('figma' if is_figma else 'html') != _mt:
+    problems.append(base + ' 路线判定矛盾：页面 source_anchor(' + (_sa or '缺失') + ') 与 source-manifest source_type(' + _mt + ') 不一致——数据完整性 fail-closed，须人工核对归一')
 
 has_text = False
 for n, row in enumerate(data, start=2):
