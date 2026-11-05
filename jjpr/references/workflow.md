@@ -61,6 +61,7 @@ git -c user.name='jj-ai-agent' \
 - 用 `-c` 而非 `--author`：`-c` 连 committer 一起改（author 与 committer 一致），`--author` 只改 author，GitHub 会显示 "bot authored, 个人 committed" 双人署名易混淆。
 - 邮箱必须用 jj-ai-agent 账号的真实 noreply（`<AppID>+jj-ai-agent[bot]@users.noreply.github.com` 形态，ID 以 GitHub App 设置页核实为准），禁止占位——占位 noreply 会被 GitHub 按用户名解析到同名真人账号（2026-11 事故，5 条提交归属陌生人）。
 - 代码注释里的 author 字段不受此条约束，仍按项目约定填写人名。
+- **提交信息格式**：conventional commit `<type>(<scope>): <subject>`，scope 可选（全局性变更省略）；type 枚举、subject 约定与按卡 commit 示例以项目宪法 AGENTS.md **R-GIT** 为正源，不在此复制——PR 内每个 commit 同样守此格式。
 
 ## 5. 跑确定性检查
 
