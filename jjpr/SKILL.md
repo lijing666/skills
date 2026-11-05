@@ -85,7 +85,7 @@ AI 编排用的内部命令（不对外，逐步用法见 `references/workflow.m
 
 ```bash
 jjpr doctor                                   # 接入验证（一次性）
-# ……本地实现与小步提交（本地 commit 沿用项目 git 既有署名）……
+# ……本地实现与小步提交（AI 执行的 commit 统一署 bot 名，口径见 references/workflow.md §4）……
 jjpr --title "…" --body-file pr.md            # 推送 + 创建 PR
 jjpr gh pr checks <PR号>                      # （内部）盯 CI
 jjpr gh pr view <PR号>                        # （内部）看评审

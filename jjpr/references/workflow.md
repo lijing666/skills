@@ -50,7 +50,17 @@ jjpr gh repo view
 
 - 保持既有架构与约定，不改无关文件。
 - 发现必须做的后续事项超出范围时，写进 PR 说明，不静默扩权。
-- 本地小步提交，每步可独立回滚；commit 沿用项目 git 既有署名配置。
+- 本地小步提交，每步可独立回滚；**AI 执行的 commit 统一署执行者（bot）名，禁止借用户名义署名**（与安全红线 6「操作可归因到 App bot 身份」同一原则延伸到本地 commit；触碰风险区时的 `[risk-ok: @<批准人>]` 批准人填真实批准的人的 GitHub 账号）：
+
+```bash
+git -c user.name='jj-ai-agent' \
+    -c user.email='5173699+jj-ai-agent[bot]@users.noreply.github.com' \
+    commit -m "..."
+```
+
+- 用 `-c` 而非 `--author`：`-c` 连 committer 一起改（author 与 committer 一致），`--author` 只改 author，GitHub 会显示 "bot authored, 个人 committed" 双人署名易混淆。
+- 邮箱必须用 jj-ai-agent 账号的真实 noreply（`<AppID>+jj-ai-agent[bot]@users.noreply.github.com` 形态，ID 以 GitHub App 设置页核实为准），禁止占位——占位 noreply 会被 GitHub 按用户名解析到同名真人账号（2026-11 事故，5 条提交归属陌生人）。
+- 代码注释里的 author 字段不受此条约束，仍按项目约定填写人名。
 
 ## 5. 跑确定性检查
 
