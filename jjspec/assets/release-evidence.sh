@@ -133,7 +133,8 @@ else
   while IFS= read -r entry; do
     [ -z "${entry}" ] && continue
     p="${entry%%::*}"
-    if [ -f "${p}" ] && grep -qF -- "${INT_MARK}" "${p}"; then
+    # 清单条目 = 仓库根相对路径（taskcard-template 契约），按 ROOT 解析防子目录执行误判
+    if [ -f "${ROOT}/${p}" ] && grep -qF -- "${INT_MARK}" "${ROOT}/${p}"; then
       echo "- ${p}"
       found=$((found+1))
     fi

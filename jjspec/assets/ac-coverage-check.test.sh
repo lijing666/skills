@@ -3,7 +3,8 @@
 # 在临时 git 仓库中构造场景验证；全部通过输出 ALL PASS，任一失败退出码非 0。
 # 覆盖：合规卡放行/幻觉AC拦截/缺清单拦截/条目悬空拦截/条目格式非法拦截/条目非测试文件拦截/
 #       纯测试卡放行(仅测试文件early-exit)/豁免改动放行/--test-glob 登记前后对比/
-#       缺任务卡覆盖拦截/Spec文件缺失拦截/归档卡不算在场
+#       缺任务卡覆盖拦截/Spec文件缺失拦截/归档卡不算在场/
+#       子目录执行按仓库根解析清单路径(方案1)/--worktree 预演口径:未提交拦截·未跟踪拦截·暂存纳入·默认模式警告(方案2)
 set -euo pipefail
 
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/ac-coverage-check.sh"
@@ -305,6 +306,51 @@ mkdir -p ui-specs/yzz/pages
 echo spec > ui-specs/yzz/pages/p-01.md
 git add -A && git commit -qm "s18 纯资产"
 expect "纯资产不计入行为文件" 0 "diff 未触碰行为文件" HEAD~1
+
+# ── 方案1+方案2（2026-11）：仓库根解析 + --worktree 预演口径 ──
+
+# 场景19：从子目录执行 → 清单条目按仓库根解析（方案1回归锚：旧版按 CWD 解析会把合法的
+# 仓库根相对路径 tests/test_payment.py 误判为不存在，本地预演假绿、推上 CI 才报错）
+cat > changes/R1/tasks/TASK-001.md <<'EOF'
+---
+id: TASK-001
+title: 支付 s19
+risk: high
+spec: changes/R1/spec.md
+spec_ac: [AC-01]
+status: in_progress
+---
+
+## 边界
+- src/payment.py
+
+## 测试文件清单
+- tests/test_payment.py
+EOF
+echo v19 >> src/payment.py && git add -A && git commit -qm "s19 行为卡恢复"
+cd src
+expect "子目录执行按仓库根解析清单路径" 0 "测试对应性检查通过" HEAD~1
+cd ..
+
+# 场景20：--worktree 把未提交行为变更纳入检查（方案2回归锚：默认口径 BASE...HEAD 只看已提交，
+# 未提交的行为文件变更静默不进 diff = 预演假绿根因）。extra.py 是 tracked 行为文件且不在任何卡边界内
+echo base > src/extra.py && git add -A && git commit -qm "s20 加 extra.py(tracked 行为文件)"
+echo dirty >> src/extra.py
+# 20a 默认模式（BASE=HEAD 已提交 diff 为空）→ 放行，但须输出未提交警告（不拦截，防呆层）
+expect "默认模式工作区脏仅警告不拦截" 0 "未提交变更未纳入" HEAD
+# 20b --worktree：merge-base(HEAD,HEAD)=HEAD → 工作区 diff 含 src/extra.py → 行为文件无卡覆盖 → 拦截
+expect "--worktree 未提交行为变更拦截" 1 "缺任务卡覆盖" HEAD --worktree
+git checkout -q -- src/extra.py
+
+# 场景21：--worktree 未跟踪文件 fail-closed（未跟踪文件任何 git diff 都不可见，须先 git add）
+echo x > src/untracked_extra.py
+expect "--worktree 未跟踪文件拦截" 1 "未跟踪" HEAD --worktree
+rm src/untracked_extra.py
+
+# 场景22：--worktree 已暂存变更同样纳入（merge-base→工作区口径覆盖 staged；暂存≠提交，不强制 commit）
+echo staged >> src/extra.py && git add src/extra.py
+expect "--worktree 已暂存变更纳入检查" 1 "缺任务卡覆盖" HEAD --worktree
+git reset -q HEAD -- src/extra.py && git checkout -q -- src/extra.py
 
 if [ "${FAILED}" -eq 0 ]; then
   echo "ALL PASS"

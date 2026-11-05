@@ -10,6 +10,9 @@
 #   - 有在场卡但未声明边界 → 失败
 #   - diff 全豁免（只动文档/变更工件）→ 白名单仅含豁免段，boundary-check 自然放行
 #   - 输出恒非空（含豁免段）→ CI 无需判空跳过，直接交 boundary-check 比对
+# 本地预演：CI 不加开关（BASE...HEAD，仅已提交）；本地预演 extract 与 check 须同加 --worktree——
+#   未提交任务卡进白名单、未提交代码纳入检查（只加 check 一侧 = 白名单缺卡假红）；
+#   未跟踪文件（含新建任务卡）检出即拦，先 git add 不强制提交。清单/卡路径一律仓库根相对。
 jobs:
   boundary-check:
     runs-on: ubuntu-latest

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # extract-boundary.sh — 从"在场"任务卡提取越界检测边界(jjspec 物料:提取层 + 覆盖裁决)
 #
-# 在场卡 = 本次 diff(BASE...HEAD)中新建或修改的进行中任务卡
+# 在场卡 = 本次 diff 中新建或修改的进行中任务卡
+#   (默认 CI 口径 = BASE...HEAD 仅已提交;本地预演加 --worktree = merge-base→工作区,含未提交卡)
 #   changes/<需求ID>/tasks/TASK-*.md(归档件 changes/**/archive/ 不算)。
 # 白名单 = 在场卡边界并集 + 豁免段——不在场卡的边界一律不进白名单,
 #   防"借别的卡的边界夹带越界改动"(在场卡过滤)。
@@ -22,29 +23,80 @@
 #   格式二:## 边界 区块下的 `- ` 列表(taskcard-template 原生格式)
 #
 # 输出:一行一个 glob,写 stdout(恒含豁免段,永不为空——CI 无需判空跳过)。
-# 用法:extract-boundary.sh <base_ref> [changes_dir]
+# 用法:extract-boundary.sh <base_ref> [changes_dir] [--worktree]
 #   base_ref    比较基准,如 origin/main 或 PR 场景 ${{ github.base_ref }};
 #               push 直推场景用 ${{ github.event.before }}(全零 sha 由 CI 层跳过)。
 #               必传——不传即放弃在场卡过滤,等于放弃漏洞①防线,故设计为必填。
 #   changes_dir 任务卡根目录,默认仓库根 changes/
+#   --worktree  预演口径(本地预演专用,开关型):在场卡扫描基准改为 merge-base(base_ref,HEAD)→工作区,
+#               未提交(已暂存/已修改)任务卡进白名单——与 boundary-check --worktree 必须同开:
+#               check 侧看见了未提交代码改动、extract 侧看不见未提交卡 = 白名单缺卡假红。
+#               未跟踪文件不进任何 git diff,检出即拦(任务卡先 git add 再预演,不强制提交)。
+#               默认(CI)口径 = base_ref...HEAD 不变——CI 工作区干净,两口径等价,CI 调用零改动;
+#               默认模式下检出未提交变更仅警告不拦截(与另两件套同款防呆)
+# 路径解析基准:git 仓库根(diff 清单为仓库根相对路径,卡文件按此打开;脚本内部统一切换到仓库根
+#   执行,从任意子目录调用行为一致;非 git 仓库 fail-closed)
 # 配套:boundary-check.sh(白名单比对器,本脚本输出直接作其边界文件入参);
 #       CI 集成见 ci-snippets/github-actions-boundary.yml
 # author: 李晶
 set -euo pipefail
 
-BASE="${1:?用法: extract-boundary.sh <base_ref> [changes_dir](base_ref 必传——在场卡过滤依赖它)}"
-CHANGES="${2:-changes}"
+BASE="${1:?用法: extract-boundary.sh <base_ref> [changes_dir] [--worktree](base_ref 必传——在场卡过滤依赖它)}"
+shift
+CHANGES="changes"
+WORKTREE=0
+if [ $# -gt 0 ] && [[ "${1}" != --* ]]; then CHANGES="${1}"; shift; fi
+while [ $# -gt 0 ]; do
+  case "${1}" in
+    --worktree) WORKTREE=1 ;;
+    *) echo "❌ 未知参数:${1}(用法:extract-boundary.sh <base_ref> [changes_dir] [--worktree])" >&2; exit 1 ;;
+  esac
+  shift
+done
+
+# 0. 定位 git 仓库根并切换——diff 清单为仓库根相对路径,卡文件按此路径打开,须以仓库根为基准;
+#    从任意子目录调用行为一致;CI 在仓库根执行,cd 为 no-op,行为不变(fail-closed:非 git 仓库即拦)
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "❌ 边界提取未能执行:不在 git 仓库内(卡路径 = 仓库根相对,无从解析)——检查失败按不通过处理" >&2
+  exit 1
+}
+cd "${REPO_ROOT}"
 
 # 临时文件 mktemp(防并发 CI 互相干扰),trap 兜底清理
 DIFF_FILES="$(mktemp)" ; RAW="$(mktemp)" ; CLEAN="$(mktemp)"
 trap 'rm -f "${DIFF_FILES}" "${RAW}" "${CLEAN}"' EXIT
 
 # 1. 获取 diff 文件清单——失败必须显式失败,禁止静默放行(fail-closed)
+#    默认(CI)口径 = BASE...HEAD(仅已提交);--worktree 预演口径 = merge-base(BASE,HEAD)→工作区
+#    (含已提交+已暂存+已修改,未提交卡才进得了在场清单)
 #    --no-renames:重命名拆成"删旧+增新",两侧都参与在场判定(防改名搬运)
 #    -z + read -d '':NUL 分隔读取,特殊字符路径不做任何转义(防误判)
-if ! git -c core.quotepath=off diff --name-only --no-renames -z "${BASE}"...HEAD > "${DIFF_FILES}" 2>/dev/null; then
-  echo "❌ 边界提取未能执行:git diff 失败(基准 ${BASE} 是否存在?仓库是否干净?)——检查失败按不通过处理" >&2
+if [ "${WORKTREE}" -eq 1 ]; then
+  MB="$(git merge-base "${BASE}" HEAD 2>/dev/null)" || {
+    echo "❌ 边界提取未能执行:git merge-base 失败(基准 ${BASE} 与 HEAD 无共同祖先?)——检查失败按不通过处理" >&2
+    exit 1
+  }
+  DIFF_TARGET=("${MB}")
+else
+  DIFF_TARGET=("${BASE}...HEAD")
+  # 预演忘加 --worktree 的防呆:工作区有未提交变更时警告(不拦截——CI 干净工作区无感)
+  _dirty="$(git -c core.quotepath=off status --porcelain 2>/dev/null | grep -c . || true)"
+  if [ "${_dirty}" -gt 0 ]; then
+    echo "⚠️ 检测到 ${_dirty} 个未提交变更未纳入在场卡扫描——默认口径仅覆盖已提交 diff(${BASE}...HEAD);本地预演请加 --worktree" >&2
+  fi
+fi
+if ! git -c core.quotepath=off diff --name-only --no-renames -z "${DIFF_TARGET[@]}" > "${DIFF_FILES}" 2>/dev/null; then
+  echo "❌ 边界提取未能执行:git diff 失败(基准 ${BASE} 是否存在?)——检查失败按不通过处理" >&2
   exit 1
+fi
+# 未跟踪文件任何 git diff 都不可见——预演模式 fail-closed(未提交任务卡也须先 git add 才进得了
+# 在场清单;不强制提交);默认模式不拦(CI 检出工作区干净,无未跟踪文件)
+if [ "${WORKTREE}" -eq 1 ]; then
+  _ut="$(git -c core.quotepath=off status --porcelain 2>/dev/null | grep -c '^??' || true)"
+  if [ "${_ut}" -gt 0 ]; then
+    echo "❌ 预演(--worktree)检出 ${_ut} 个未跟踪文件——未跟踪文件不进任何 git diff,在场卡扫描覆盖不到(含新建任务卡);先 git add 再预演——fail-closed" >&2
+    exit 1
+  fi
 fi
 
 # 2. 遍历 diff:收集在场卡 + 标记是否存在非豁免文件

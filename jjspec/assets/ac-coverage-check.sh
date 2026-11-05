@@ -41,21 +41,30 @@
 #   目录段型          路径任一段 ∈ {tests, test, __tests__, spec, specs, e2e, androidTest, ohosTest}
 #   项目布局非典型时用 --test-glob 追加,不替换内置集。
 #
-# 用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...] [--integration-mark]
+# 用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...] [--integration-mark] [--worktree]
 #   base_ref    比较基准,必传(在场卡过滤依赖它):PR 场景 origin/${{ github.base_ref }},
 #               push 直推场景 ${{ github.event.before }}(全零 sha 由 CI 层跳过)
 #   changes_dir 任务卡根目录,默认仓库根 changes/(卡路径匹配与 extract-boundary.sh 相同,固定 changes/ 前缀)
 #   --test-glob 追加项目特有测试模式(fnmatch glob,可多次;注意 case 匹配中 * 可跨斜杠)
 #   --integration-mark 开关型(无值):启用真实性执法,从 AGENTS.md integration-mark 块读标记串
 #               (登记见 assets/AGENTS.md.template);默认关——不传对现有项目零影响
+#   --worktree  预演口径(本地预演专用,开关型):diff 基准改为 merge-base(base_ref,HEAD)→工作区,
+#               覆盖已提交+已暂存+未暂存变更,且不含 base 落后产生的反向假 diff(base 上本 PR 未
+#               包含的变更不会被误报为删除);未跟踪文件不进任何 git diff,检出即拦(先 git add 再预演)。
+#               默认(CI)口径 = base_ref...HEAD 不变——CI 工作区干净,两口径等价,CI 调用零改动;
+#               默认模式下检出未提交变更仅打警告不拦截(防本地预演忘加开关的假绿)
+# 路径解析基准:git 仓库根(与 taskcard-template「测试文件清单条目 = 仓库根相对路径」契约一致;
+#   脚本内部统一切换到仓库根执行,从任意子目录调用行为一致——旧版按执行时 CWD 解析,子目录预演
+#   会把「项目根相对」的错误路径误判为存在,推上 CI(仓库根执行)才报错)
 # 配套:taskcard-template.md(## 测试文件清单 格式);ci-snippets/github-actions-ac-coverage.yml;
 #       assets/AGENTS.md.template(integration-mark 登记块);references/gates.md 第二层(测试对应性检查)
 # author: 李晶
 set -euo pipefail
 
-BASE="${1:?用法: ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...](base_ref 必传——在场卡过滤依赖它)}"
+BASE="${1:?用法: ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...] [--integration-mark] [--worktree](base_ref 必传——在场卡过滤依赖它)}"
 shift
 CHANGES="changes"
+WORKTREE=0
 if [ $# -gt 0 ] && [[ "${1}" != --* ]]; then CHANGES="${1}"; shift; fi
 TEST_GLOBS=()
 CHECK_INT=0
@@ -63,10 +72,19 @@ while [ $# -gt 0 ]; do
   case "${1}" in
     --test-glob) shift; TEST_GLOBS+=("${1:?--test-glob 需要一个 glob 参数}") ;;
     --integration-mark) CHECK_INT=1 ;;
-    *) echo "❌ 未知参数:${1}(用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...])" >&2; exit 1 ;;
+    --worktree) WORKTREE=1 ;;
+    *) echo "❌ 未知参数:${1}(用法:ac-coverage-check.sh <base_ref> [changes_dir] [--test-glob <glob>...] [--worktree])" >&2; exit 1 ;;
   esac
   shift
 done
+
+# 0. 定位 git 仓库根并切换——所有相对路径(清单条目/spec:/changes_dir)统一按仓库根解析,从任意
+#    子目录调用行为一致;CI 在仓库根执行,cd 为 no-op,行为不变(fail-closed:非 git 仓库即拦)
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "❌ 测试对应性检查未能执行:不在 git 仓库内(路径契约 = 仓库根相对,无从解析)——检查失败按不通过处理" >&2
+  exit 1
+}
+cd "${REPO_ROOT}"
 
 DIFF_FILES="$(mktemp)"; WORKDIR="$(mktemp -d)"
 trap 'rm -rf "${DIFF_FILES}" "${WORKDIR}"' EXIT
@@ -87,11 +105,36 @@ if [ "${CHECK_INT}" -eq 1 ]; then
 fi
 
 # 1. diff 文件清单——失败显式失败,禁止静默放行(fail-closed)
+#    默认(CI)口径 = BASE...HEAD(仅已提交);--worktree 预演口径 = merge-base(BASE,HEAD)→工作区
+#    (含已提交+已暂存+未暂存;不含 base 落后的反向假 diff)
 #    --no-renames:重命名拆成"删旧+增新",两侧都参与分类(防改名搬运)
 #    -z + read -d '':NUL 分隔读取,特殊字符路径不做任何转义(防误判)
-if ! git -c core.quotepath=off diff --name-only --no-renames -z "${BASE}"...HEAD > "${DIFF_FILES}" 2>/dev/null; then
-  echo "❌ 测试对应性检查未能执行:git diff 失败(基准 ${BASE} 是否存在?仓库是否干净?)——检查失败按不通过处理" >&2
+if [ "${WORKTREE}" -eq 1 ]; then
+  MB="$(git merge-base "${BASE}" HEAD 2>/dev/null)" || {
+    echo "❌ 测试对应性检查未能执行:git merge-base 失败(基准 ${BASE} 与 HEAD 无共同祖先?)——检查失败按不通过处理" >&2
+    exit 1
+  }
+  DIFF_TARGET=("${MB}")
+else
+  DIFF_TARGET=("${BASE}...HEAD")
+  # 预演忘加 --worktree 的防呆:工作区有未提交变更时警告(不拦截——CI 干净工作区无感)
+  _dirty="$(git -c core.quotepath=off status --porcelain 2>/dev/null | grep -c . || true)"
+  if [ "${_dirty}" -gt 0 ]; then
+    echo "⚠️ 检测到 ${_dirty} 个未提交变更未纳入本次检查——默认口径仅覆盖已提交 diff(${BASE}...HEAD);本地预演请加 --worktree" >&2
+  fi
+fi
+if ! git -c core.quotepath=off diff --name-only --no-renames -z "${DIFF_TARGET[@]}" > "${DIFF_FILES}" 2>/dev/null; then
+  echo "❌ 测试对应性检查未能执行:git diff 失败(基准 ${BASE} 是否存在?)——检查失败按不通过处理" >&2
   exit 1
+fi
+# 未跟踪文件任何 git diff 都不可见——预演模式 fail-closed(先 git add 使其进入工作区 diff);
+# 默认模式不拦(CI 检出工作区干净,无未跟踪文件)
+if [ "${WORKTREE}" -eq 1 ]; then
+  _ut="$(git -c core.quotepath=off status --porcelain 2>/dev/null | grep -c '^??' || true)"
+  if [ "${_ut}" -gt 0 ]; then
+    echo "❌ 预演(--worktree)检出 ${_ut} 个未跟踪文件——未跟踪文件不进任何 git diff,预演覆盖不到;先 git add 再预演——fail-closed" >&2
+    exit 1
+  fi
 fi
 
 is_exempt() {

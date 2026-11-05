@@ -11,6 +11,8 @@
 # 测试文件识别：内置多平台命名约定（Python/Go/Java/Kotlin/Swift/ObjC/Dart/ArkTS/JS·TS/Shell
 #   及 tests|test|__tests__|spec|specs|e2e|androidTest|ohosTest 目录段）；布局非典型时在
 #   run 末尾追加 --test-glob，如：.github/scripts/ac-coverage-check.sh "${BASE}" --test-glob 'qa/checks/*'
+# 本地预演：CI 不加开关（BASE...HEAD，仅已提交）；本地预演加 --worktree——未提交/已暂存变更
+#   纳入检查、未跟踪文件检出即拦（先 git add），防「预演绿、CI 红」。清单路径一律仓库根相对。
 jobs:
   ac-coverage-check:
     runs-on: ubuntu-latest

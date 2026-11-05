@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # boundary-check.test.sh — boundary-check.sh 回归测试
 # 在临时 git 仓库中构造场景验证；全部通过输出 ALL PASS，任一失败退出码非 0。
-# 覆盖：放行/拦截/基准不存在(fail-closed)/重命名搬运/中文文件名
+# 覆盖：放行/拦截/基准不存在(fail-closed)/重命名搬运/中文文件名/
+#       --worktree 预演口径:未提交越界拦截·默认模式警告·未跟踪拦截(方案2)
 set -euo pipefail
 
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/boundary-check.sh"
@@ -68,5 +69,35 @@ else
   echo "---- 输出 ----"; echo "${out}"; echo "--------------"
   FAILED=1
 fi
+
+# ── 方案2（2026-11）：--worktree 预演口径 ──
+
+# 场景8：--worktree 把未提交越界变更纳入检查（方案2回归锚：默认口径 BASE...HEAD 只看已提交，
+# 未提交改动静默不进 diff = 预演假绿根因）；默认模式同场景仅警告不拦截（CI 干净工作区无感）
+echo base > src/forbidden/dirty.py && git add -A && git commit -qm "c7 tracked 越界文件"
+echo dirty >> src/forbidden/dirty.py
+out="$(bash "${SCRIPT}" "HEAD" boundary.txt 2>&1)" && rc=0 || rc=$?
+if [ "${rc}" -eq 0 ] && echo "${out}" | grep -q "未提交变更未纳入"; then
+  echo "PASS: 默认模式工作区脏仅警告不拦截"
+else
+  echo "FAIL: 默认模式脏工作区行为异常（rc=${rc}）"; echo "${out}"; FAILED=1
+fi
+out="$(bash "${SCRIPT}" "HEAD" boundary.txt --worktree 2>&1)" && rc=0 || rc=$?
+if [ "${rc}" -eq 1 ] && echo "${out}" | grep -q "src/forbidden/dirty.py"; then
+  echo "PASS: --worktree 未提交越界变更拦截"
+else
+  echo "FAIL: --worktree 未拦截未提交越界变更（rc=${rc}）"; echo "${out}"; FAILED=1
+fi
+git checkout -q -- src/forbidden/dirty.py
+
+# 场景9：--worktree 未跟踪文件 fail-closed（未跟踪文件任何 git diff 都不可见，须先 git add）
+echo x > src/untracked_f.py
+out="$(bash "${SCRIPT}" "HEAD" boundary.txt --worktree 2>&1)" && rc=0 || rc=$?
+if [ "${rc}" -eq 1 ] && echo "${out}" | grep -q "未跟踪"; then
+  echo "PASS: --worktree 未跟踪文件拦截"
+else
+  echo "FAIL: --worktree 未拦截未跟踪文件（rc=${rc}）"; echo "${out}"; FAILED=1
+fi
+rm src/untracked_f.py
 
 if [ "${FAILED}" -eq 0 ]; then echo "ALL PASS"; else exit 1; fi
