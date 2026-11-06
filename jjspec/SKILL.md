@@ -3,7 +3,7 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.20.0
+  version: 1.20.1
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
@@ -72,7 +72,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 ## 贯穿各场景的约定
 
 - **体系变更评估**（不绑定场景）：模型升级 / 更换宿主工具 / 大改规则资产（AGENTS.md、模板、门禁脚本）之前，先按 `evaluation.md` 跑金丝雀任务集——体系是概率组件，变更会静默漂移，先量化再放量。
-- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档三步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词（带编号实体文件例外见 prd-constitution.md 第八节）。
+- **变更工件落点与归档**（推荐约定，详见 `prd-constitution.md` 第八节；场景 B ⑨ 与场景 C ⑨ 均触发）：进行中的变更放 `changes/<需求ID>/{prd.md, spec.md, hld.md, tasks/TASK-<编号>.md}`（一卡一文件）；验收合入后走**归档四步**——移入 `changes/archive/<日期>-<ID>`、`INDEX.md` 登记一行（能力编年导航）、资产基线检查（PRD：触碰目标/非目标/角色/成功标准才修订并版本留痕；HLD：模块增删/数据流/接口契约变更才更新 `docs/HLD.md`；spec/tasks 不回流）、路径映射登记（INDEX 行下登记旧→新映射，人读引用由映射兜底；外部引用一律不改，AI 禁以「修复悬空引用」为名改归档目录外文件，机读例外停下交用户）。命名分层：`docs/` 资产层大写（PRD.md / HLD.md / SPEC.md / TASKS.md），`changes/` 过程层小写（prd / spec / hld / tasks），文件名全局只用 prd/hld/spec/tasks/adr 五个词（带编号实体文件例外见 prd-constitution.md 第八节）。
 - **临时工件清洁**（适用所有场景与所有宿主工具）：自编校验/诊断/一次性脚本与中间产物一律落系统临时目录（macOS/Linux `/tmp`、Windows `%TEMP%`），禁止在仓库工作区创建任何非交付文件（非交付 = 不属于当前指令声明产物清单的文件）；优先复用 assets 现成脚本，其次单行命令（grep / awk / python -c）不落盘；每个停靠点交付前自查 `git status`，出现非交付文件先清理再停——违反后果：临时校验被后续会话当作项目事实、随交付误提交（2026-10-22 Codex 在需求 tasks/ 目录自编 check-ui-binding.py 事故的提级条款）
 - **文档/分析范围优先**：预检只读，规则缺口记入目标产物的建议，不自动修改 AGENTS.md、CI 或新增已接受 ADR；指定产物完成即止。用户明确要求修改规则/配置/lint/CI 时在授权范围内实施并验证，不自动发布。纯文档任务不要求开工授权。
 
