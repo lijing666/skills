@@ -50,7 +50,7 @@ jjpr gh repo view
 
 - 保持既有架构与约定，不改无关文件。
 - 发现必须做的后续事项超出范围时，写进 PR 说明，不静默扩权。
-- 本地小步提交，每步可独立回滚；**AI 执行的 commit 统一署执行者（bot）名，禁止借用户名义署名**（与安全红线 6「操作可归因到 App bot 身份」同一原则延伸到本地 commit；触碰风险区时的 `[risk-ok: @<批准人>]` 批准人填真实批准的人的 GitHub 账号）：
+- 本地小步提交，每步可独立回滚；**AI 执行的 commit 统一署执行者（bot）名，禁止借用户名义署名**（与安全红线 6「操作可归因到 App bot 身份」同一原则延伸到本地 commit；触碰风险区时的 `[risk-ok: @<批准人>]` 批准人填真实批准的人的 GitHub 账号。风险区判据与清单以项目根 AGENTS.md `risk-zones-begin/end` 块为唯一正源，标记语义与脚本检查机制见 jjspec AGENTS.md.template / principles-v1.md，不在此复制）：
 
 ```bash
 git -c user.name='jj-ai-agent' \
