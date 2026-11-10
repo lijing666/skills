@@ -36,7 +36,7 @@ mk_case() {
 }
 
 # ── 场景 1：干净全链 → PASS
-expect "干净仓库四项全绿" 0 "DOC-CHAIN PASS" "$(mk_case c1)"
+expect "干净仓库五项全绿" 0 "DOC-CHAIN PASS" "$(mk_case c1)"
 
 # ── 场景 2：嵌套同名目录段 → 拦
 d="$(mk_case c2)"; mkdir -p "$d/changes/x/x"
@@ -84,6 +84,34 @@ expect "无 changes 目录放行" 0 "DOC-CHAIN PASS" "$d"
 # ── 场景 11：hld draft 但批准表存在生效行（旧批准冒充）→ 拦
 d="$(mk_case c11)"; sed -i '' 's/^status: approved/status: draft/' "$d/changes/x/hld.md"
 expect "draft 旧批准冒充拦截" 1 "旧批准冒充" "$d"
+
+# mk_pkg <仓库> <包名> <README状态>：建规范包目录（校验 5 用）
+mk_pkg() {
+  mkdir -p "$1/ui-specs/$2"
+  printf '状态：%s\n' "$3" > "$1/ui-specs/$2/README.md"
+}
+
+# ── 场景 12：规范包同名唯一——base(可用)+base-v2(可用) → 拦（整体改版未拍板先建版本包/同源重复生成新目录）
+d="$(mk_case c12)"; mk_pkg "$d" yzz-admin 可用; mk_pkg "$d" yzz-admin-v2 可用
+expect "规范包同名多份未归档拦截" 1 "同一基础段多个未归档规范包" "$d"
+
+# ── 场景 13：整体改版合法形态——base(归档)+base-v2(可用) → PASS
+d="$(mk_case c13)"; mk_pkg "$d" yzz-admin 归档; mk_pkg "$d" yzz-admin-v2 可用
+expect "整体改版 v2 并存（旧包归档）不误伤" 0 "DOC-CHAIN PASS" "$d"
+
+# ── 场景 14：同源重复生成 draft 双包 → 拦
+d="$(mk_case c14)"; mk_pkg "$d" yzz-admin draft; mk_pkg "$d" yzz-admin-v2 draft
+expect "draft 态同名双包拦截" 1 "同一基础段多个未归档规范包" "$d"
+
+# ── 场景 15：README 无状态行按未归档计（fail-closed）→ 拦
+d="$(mk_case c15)"; mk_pkg "$d" yzz-admin 可用; mkdir -p "$d/ui-specs/yzz-admin-v2"
+printf '无状态行\n' > "$d/ui-specs/yzz-admin-v2/README.md"
+expect "无状态行按未归档计拦截" 1 "同一基础段多个未归档规范包" "$d"
+
+# ── 场景 16：无 changes/ 但 ui-specs 同名违例 → 仍拦（校验 5 不依赖 changes/）
+d="$WORK/c16"; mkdir -p "$d/ui-specs/foo" "$d/ui-specs/foo-v2"
+printf '状态：可用\n' > "$d/ui-specs/foo/README.md"; printf '状态：可用\n' > "$d/ui-specs/foo-v2/README.md"
+expect "无 changes 目录仍执行规范包校验" 1 "同一基础段多个未归档规范包" "$d"
 
 echo
 echo "PASS: $PASS / $TOTAL"

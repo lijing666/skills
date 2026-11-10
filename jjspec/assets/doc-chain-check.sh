@@ -12,6 +12,8 @@
 #      a) hld status=approved 时「方案批准记录」表残留「待批准」行即失败；
 #         status=draft 但批准表存在生效批准行（有效性列非待批准）即失败（旧批准冒充）
 #      b) prd status=已定稿 且存在版本表节时，版本表最后一个表格行须含「定稿」
+#   5. 规范包同名唯一：ui-specs/ 按基础段（剥 -vN 后缀）分组，组内目录 >1 且未置「归档」者也 >1 即失败
+#      —— 整体改版 -vN 版本包与旧包并存属生命周期合法形态（旧包 README 状态=归档）；无状态行按未归档计（fail-closed）
 # 用法：doc-chain-check.sh <项目根> [--diff <基准>]
 #   --diff <基准>：仅校验基准以来 diff 涉及的需求目录（CI 批量模式）；无开关全量校验
 # 存量违例处置：项目接入体检时对账清理，清零前本门禁保持拦截（fail-closed）
@@ -33,8 +35,28 @@ if [ -z "$ROOT" ] || [ ! -d "$ROOT" ]; then
 fi
 cd "$ROOT" || exit 2
 
+# ── 校验 5：规范包同名唯一（不依赖 changes/——规范包落点为工作区根 ui-specs/，与 changes/ 平级，宪法第九节第 10 条）──
+pkg_viol="$(for d in ui-specs/*/; do
+  [ -d "$d" ] || continue
+  n="$(basename "$d")"
+  base="$(printf '%s' "$n" | sed -E 's/-v[0-9]+$//')"
+  st="$(grep -oE '状态(：|:)[[:space:]]*(draft|可用|归档)' "${d}README.md" 2>/dev/null | head -1 | grep -oE '(draft|可用|归档)$' || true)"
+  printf '%s|%s\n' "$base" "$st"
+done | awk -F'|' '
+{
+  cnt[$1]++
+  if ($2 != "归档") live[$1]++
+}
+END {
+  for (k in cnt) if (cnt[k] > 1 && live[k] > 1)
+    printf "基础段 %s：%d 个目录中 %d 个未置「归档」（同真源同业务大项禁新建；整体改版 -vN 版本包并存时旧包 README 状态须=归档）\n", k, cnt[k], live[k]
+}')"
+[ -n "$pkg_viol" ] && fail "ui-specs/ 同一基础段多个未归档规范包（正主唯一，落点自检见 ui-spec-guide 生成管线步 4）:
+$pkg_viol"
+
 if [ ! -d "changes" ]; then
-  echo "DOC-CHAIN PASS（无 changes/ 目录，无文档链）"
+  if [ "$FAIL" -eq 1 ]; then printf '%s' "$detail"; echo "DOC-CHAIN FAIL"; exit 1; fi
+  echo "DOC-CHAIN PASS（无 changes/ 目录，文档链无对象；规范包校验完成）"
   exit 0
 fi
 
@@ -119,5 +141,5 @@ if [ "$FAIL" -eq 1 ]; then
   echo "DOC-CHAIN FAIL"
   exit 1
 fi
-echo "DOC-CHAIN PASS（嵌套/副本/悬空批准/状态自洽 四项全绿）"
+echo "DOC-CHAIN PASS（嵌套/副本/悬空批准/状态自洽/规范包同名唯一 五项全绿）"
 exit 0
