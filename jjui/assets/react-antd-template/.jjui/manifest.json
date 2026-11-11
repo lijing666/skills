@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "admin-prototype",
+  "jjui_version": "__JJUI_VERSION__",
+  "product_id": "__PRODUCT_ID__",
+  "business": "__BUSINESS__",
+  "stack": "react-antd",
+  "start_command": "npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
+  "base_url": "http://127.0.0.1:4173/",
+  "viewport": {"width": 1440, "height": 900},
+  "dpr": 1,
+  "tokens_file": "src/styles/tokens.css",
+  "page_plan": ".jjui/page-plan.json",
+  "route_registry": ".jjui/jjspec/routes.json",
+  "excluded_pages": ".jjui/jjspec/excluded-pages.json",
+  "visual_source_globs": ["index.html", "src/**", "public/**", "package.json", "vite.config.ts", "tsconfig.json"]
+}

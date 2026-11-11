@@ -1,0 +1,436 @@
+/* 壳层（判据正源: composition-layer.md 布局壳层段）——
+   全高侧栏（品牌区顶部、菜单独立滚动）+ 固定顶栏 + 内容区独立滚动，window 不滚动 */
+.admin-layout {
+  height: 100vh;
+  display: flex;
+  min-width: 0;
+}
+
+.admin-sider {
+  width: var(--layout-sider-width);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-split);
+}
+
+.admin-sider__brand {
+  height: var(--layout-header-height);
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+}
+
+.admin-sider__menu {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.admin-sider .el-menu {
+  border-right: none;
+}
+
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  height: var(--layout-header-height);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-split);
+}
+
+.admin-layout__content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6) var(--space-8);
+}
+
+.admin-layout__page {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+}
+
+.jjui-page-header {
+  margin-bottom: var(--space-6);
+}
+
+/* 返回箭头与标题同行垂直居中（titleline），描述独立在标题下方——箭头不悬空、不挤进描述行 */
+.jjui-page-header__titleline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.jjui-page-header__back {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.jjui-page-header__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-title);
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.jjui-page-header__description {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  line-height: 22px;
+}
+
+.jjui-section {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow-x: auto;
+}
+
+.jjui-master {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+/* 门牌（判据正源: composition-layer.md 主从布局段）——容器内部顶部，样式单源 */
+.jjui-master__head {
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  border-bottom: 1px solid var(--color-border-split);
+}
+
+.jjui-master__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-section);
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.jjui-master__description {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  line-height: 22px;
+}
+
+/* 分栏区（判据正源: composition-layer.md 主从布局段）——右栏 min-width: 0 防横向溢出压扁兄弟分区 */
+.jjui-master__body {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+
+.jjui-master__aside {
+  width: var(--layout-master-width);
+  flex: none;
+  border-right: 1px solid var(--color-border-split);
+}
+
+.jjui-master__main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+}
+
+.jjui-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.jjui-section__title {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-section);
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.jjui-section__subtitle {
+  margin: var(--space-5) 0 var(--space-3);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.jjui-section__extra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.jjui-section__description {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  line-height: 22px;
+}
+
+.jjui-metric {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.jjui-metric--success::before,
+.jjui-metric--warning::before,
+.jjui-metric--danger::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.jjui-metric--success::before { background: var(--color-success); }
+.jjui-metric--warning::before { background: var(--color-warning); }
+.jjui-metric--danger::before { background: var(--color-danger); }
+
+.jjui-metric__hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: 16px;
+}
+
+/* 表格卡头（判据正源: composition-layer.md 工具栏段）——
+   左翼快捷操作+快捷搜索，右翼配置图标；本类只排自有元素 */
+.jjui-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+/* 画布页三区一体容器（判据正源: composition-layer.md 编辑器型页面段）——
+   画布区 + 伴随面板 + 底部状态栏；分区用间距与 1px 分隔线，不保留阴影；
+   状态栏经 el-affix 钉住（浮层贴视口底），容器自身不做 sticky/负 margin */
+.jjui-canvas {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: clip;
+}
+
+.jjui-canvas__body {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+
+.jjui-canvas__stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 480px;
+}
+
+/* 伴随面板（判据正源: composition-layer.md 编辑器型页面段——canvas/ide 共享） */
+.jjui-editor-panel {
+  width: var(--layout-master-width);
+  flex: none;
+  border-left: 1px solid var(--color-border-split);
+  padding: var(--space-4) var(--space-5);
+  padding-bottom: var(--space-8);
+  overflow-y: auto;
+}
+
+/* 底部状态栏（判据正源: composition-layer.md 编辑器型页面段——canvas/ide 共享）；
+   经 el-affix 钉住（层级由组件库浮层阶梯自动保证），样式只管分区外观 */
+.jjui-editor-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border-split);
+}
+
+/* 编辑器工作台三栏一体容器（判据正源: composition-layer.md 编辑器型页面段）——
+   大纲树 + Tabs 编辑器 + 伴随面板 + 底部状态栏；分区用间距与 1px 分隔线，不保留阴影；
+   状态栏经 el-affix 钉住（浮层贴视口底），容器自身不做 sticky/负 margin */
+.jjui-ide {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: clip;
+}
+
+.jjui-ide__body {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+
+.jjui-ide__tree {
+  width: var(--layout-master-width);
+  flex: none;
+  border-right: 1px solid var(--color-border-split);
+  padding: var(--space-3);
+  padding-bottom: var(--space-8);
+  overflow-y: auto;
+}
+
+.jjui-ide__tree-item {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.jjui-ide__tree-item--selected {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+}
+
+.jjui-ide__editor {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) var(--space-6);
+  padding-bottom: var(--space-8);
+  overflow-y: auto;
+}
+
+.jjui-canvas__node {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  min-width: 120px;
+}
+
+.jjui-canvas__node--selected {
+  border-color: var(--color-primary);
+}
+
+.jjui-canvas__node-title {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.jjui-canvas__node-desc {
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: 16px;
+}
+
+/* EdgeLabelRenderer 容器 pointer-events: none，标签元素须自行恢复可点（判据正源: vue3-element-plus.md 画布段） */
+.jjui-canvas__edge-label {
+  pointer-events: all;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+/* 分页（判据正源: composition-layer.md 表格段）——整组靠右；
+   element-plus 翻页按钮默认无边框、总数文字默认抢黑，
+   此处为组合层基线的单源豁免点（页面与局部样式仍不得覆盖组件库内部样式） */
+.jjui-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+.jjui-pagination .el-pagination .btn-prev,
+.jjui-pagination .el-pagination .btn-next {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.jjui-pagination .el-pagination__total {
+  color: var(--color-text-secondary);
+}
+
+/* 页码单源收敛（判据正源: composition-layer.md 表格段）——
+   element-plus 页码默认裸文字，此处为组合层基线豁免点：
+   页码全部带边框，激活页码主色填充白字 */
+.jjui-pagination .el-pager li {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.jjui-pagination .el-pager li.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+/* 工具栏是排布容器，不是视觉容器（判据正源: composition-layer.md 工具栏段）——
+   零盒模型装饰：无 padding/margin/背景/圆角/阴影，间距由宿主卡 body 统一提供 */
+.jjui-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+}
+
+.jjui-toolbar__filters,
+.jjui-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* 表单字段槽等宽（查询卡实现）：label 定宽 + 控件两档 token（判据正源: composition-layer.md 表格段查询卡布局 + 表单段通用判据）——跨行左起对齐 */
+.jjui-toolbar__filters .el-form-item__label {
+  width: var(--form-label-width);
+  text-align: left;
+}
+
+.jjui-toolbar__actions {
+  margin-left: auto;
+}
+
+.jjui-empty__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.jjui-empty__description {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+}

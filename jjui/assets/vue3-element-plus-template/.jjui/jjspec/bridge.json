@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "input_type": "html-prototype",
+  "prototype_root": ".",
+  "start_command": "npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
+  "base_url": "http://127.0.0.1:4173/",
+  "viewport": {"width": 1440, "height": 900},
+  "dpr": 1,
+  "visual_source_globs": ["index.html", "src/**", "public/**", "package.json", "vite.config.ts", "tsconfig.json"],
+  "tokens_file": "src/styles/tokens.css",
+  "route_registry": ".jjui/jjspec/routes.json",
+  "excluded_pages": ".jjui/jjspec/excluded-pages.json"
+}

@@ -1,0 +1,461 @@
+{
+  "schema_version": 1,
+  "pages": [
+    {
+      "id": "p-01",
+      "slug": "dashboard",
+      "title": "总览",
+      "route": "/dashboard",
+      "file": "src/pages/p-01-dashboard/index.tsx",
+      "expected_entry": [
+        "menu"
+      ],
+      "composition": {
+        "recipe": "dashboard",
+        "required_components": [
+          "PageHeader",
+          "MetricCard",
+          "SectionCard"
+        ]
+      },
+      "regions": [
+        {
+          "id": "metrics",
+          "anchor": "p-01.metrics",
+          "title": "指标卡区"
+        },
+        {
+          "id": "recent",
+          "anchor": "p-01.recent",
+          "title": "最近客户区"
+        }
+      ],
+      "actions": [],
+      "dynamic_regions": [
+        {
+          "id": "customer-rows",
+          "anchor": "p-01.customer-rows",
+          "dataset": "recentCustomers"
+        }
+      ],
+      "structural_texts": [
+        "总览",
+        "客户经营核心指标与近期动态。",
+        "客户总数",
+        "当前启用与停用客户合计",
+        "启用客户",
+        "状态为 active 的客户数量",
+        "停用客户",
+        "状态为 inactive 的客户数量"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty"
+      ],
+      "mock_dataset": "customers",
+      "acceptance": [
+        "指标卡渲染",
+        "最近客户表渲染"
+      ]
+    },
+    {
+      "id": "p-02",
+      "slug": "customer-list",
+      "title": "客户列表",
+      "route": "/customers",
+      "file": "src/pages/p-02-customer-list/index.tsx",
+      "expected_entry": [
+        "menu"
+      ],
+      "composition": {
+        "recipe": "list",
+        "required_components": [
+          "PageHeader",
+          "Toolbar",
+          "SectionCard",
+          "StatusTag"
+        ]
+      },
+      "regions": [
+        {
+          "id": "filter",
+          "anchor": "p-02.filter",
+          "title": "筛选区"
+        },
+        {
+          "id": "table",
+          "anchor": "p-02.table",
+          "title": "表格区"
+        }
+      ],
+      "actions": [
+        {
+          "id": "create",
+          "anchor": "p-02.create",
+          "label": "新建客户"
+        },
+        {
+          "id": "filter-apply",
+          "anchor": "p-02.filter-apply",
+          "label": "查询"
+        },
+        {
+          "id": "filter-reset",
+          "anchor": "p-02.filter-reset",
+          "label": "重置"
+        },
+        {
+          "id": "row-edit",
+          "anchor": "p-02.row-edit",
+          "label": "编辑"
+        },
+        {
+          "id": "row-detail",
+          "anchor": "p-02.row-detail",
+          "label": "详情"
+        },
+        {
+          "id": "filter-keyword",
+          "anchor": "p-02.filter-keyword",
+          "label": "客户名称筛选"
+        },
+        {
+          "id": "filter-status",
+          "anchor": "p-02.filter-status",
+          "label": "状态筛选"
+        },
+        {
+          "id": "table-refresh",
+          "anchor": "p-02.table-refresh",
+          "label": "刷新"
+        },
+        {
+          "id": "table-columns",
+          "anchor": "p-02.table-columns",
+          "label": "列设置"
+        },
+        {
+          "id": "quick-search",
+          "anchor": "p-02.quick-search",
+          "label": "快捷搜索"
+        },
+        {
+          "id": "form-name",
+          "anchor": "p-02.form-name",
+          "label": "客户名称"
+        },
+        {
+          "id": "form-status",
+          "anchor": "p-02.form-status",
+          "label": "状态"
+        },
+        {
+          "id": "form-region",
+          "anchor": "p-02.form-region",
+          "label": "地区"
+        },
+        {
+          "id": "form-owner",
+          "anchor": "p-02.form-owner",
+          "label": "负责人"
+        },
+        {
+          "id": "page-size",
+          "anchor": "p-02.page-size",
+          "label": "每页条数切换"
+        },
+        {
+          "id": "page-prev",
+          "anchor": "p-02.page-prev",
+          "label": "上一页"
+        },
+        {
+          "id": "page-next",
+          "anchor": "p-02.page-next",
+          "label": "下一页"
+        }
+      ],
+      "dynamic_regions": [
+        {
+          "id": "customer-rows",
+          "anchor": "p-02.customer-rows",
+          "dataset": "customers"
+        }
+      ],
+      "structural_texts": [
+        "客户列表",
+        "按条件检索客户，并维护客户基础信息。",
+        "客户名称",
+        "状态",
+        "地区",
+        "负责人",
+        "操作",
+        "新建客户",
+        "查询",
+        "重置",
+        "编辑",
+        "详情",
+        "启用",
+        "停用",
+        "刷新",
+        "列设置",
+        "每页",
+        "快捷搜索客户",
+        "上一页",
+        "下一页",
+        "创建客户",
+        "编辑客户"
+      ],
+      "states": [
+        "default",
+        "loading",
+        "empty"
+      ],
+      "mock_dataset": "customers",
+      "acceptance": [
+        "筛选区渲染",
+        "客户表渲染",
+        "新建客户按钮可点"
+      ],
+      "mock_rows": 26
+    },
+    {
+      "id": "p-03",
+      "slug": "canvas-editor",
+      "title": "实体画布",
+      "route": "/canvas",
+      "file": "src/pages/p-03-canvas-editor/index.tsx",
+      "expected_entry": [
+        "menu"
+      ],
+      "composition": {
+        "recipe": "canvas",
+        "required_components": [
+          "PageHeader",
+          "StatusTag"
+        ]
+      },
+      "regions": [
+        {
+          "id": "canvas",
+          "anchor": "p-03.canvas",
+          "title": "画布区"
+        },
+        {
+          "id": "panel",
+          "anchor": "p-03.panel",
+          "title": "伴随面板"
+        },
+        {
+          "id": "statusbar",
+          "anchor": "p-03.statusbar",
+          "title": "底部状态栏"
+        }
+      ],
+      "actions": [
+        {
+          "id": "edit-entity",
+          "anchor": "p-03.edit-entity",
+          "label": "编辑属性"
+        },
+        {
+          "id": "canvas-check",
+          "anchor": "p-03.canvas-check",
+          "label": "校验"
+        },
+        {
+          "id": "canvas-history",
+          "anchor": "p-03.canvas-history",
+          "label": "版本历史"
+        },
+        {
+          "id": "canvas-publish",
+          "anchor": "p-03.canvas-publish",
+          "label": "发布"
+        },
+        {
+          "id": "form-label",
+          "anchor": "p-03.form-label",
+          "label": "实体名称"
+        },
+        {
+          "id": "form-description",
+          "anchor": "p-03.form-description",
+          "label": "说明"
+        }
+      ],
+      "dynamic_regions": [],
+      "structural_texts": [
+        "实体画布",
+        "以画布维护实体与关系，选中节点或边后在伴随面板编辑并查看校验。",
+        "客户",
+        "订单",
+        "商品",
+        "购买商品的个人或组织。",
+        "一次购买的完整记录。",
+        "订单中售卖的最小单元。",
+        "下单 · 1..n",
+        "包含 · n..m",
+        "标识",
+        "主键",
+        "编辑属性",
+        "校验",
+        "「商品」缺少主键属性",
+        "「订单」到「商品」的关系未标注基数",
+        "基线 v1.4",
+        "草稿",
+        "已发布",
+        "版本历史",
+        "发布",
+        "编辑实体属性",
+        "名称",
+        "说明",
+        "保存",
+        "取消",
+        "发布画布",
+        "发布后当前草稿将固化为基线 v1.5，已发布版本不可直接修改。",
+        "v1.4",
+        "v1.3",
+        "v1.2",
+        "当前草稿基线",
+        "新增商品实体",
+        "调整下单关系基数"
+      ],
+      "states": [
+        "default"
+      ],
+      "mock_dataset": "entities",
+      "acceptance": [
+        "画布节点与关系渲染",
+        "选中节点驱动伴随面板",
+        "发布与版本历史可演示"
+      ]
+    },
+    {
+      "id": "p-04",
+      "slug": "entity-workbench",
+      "title": "实体工作台",
+      "route": "/workbench",
+      "file": "src/pages/p-04-entity-workbench/index.tsx",
+      "expected_entry": [
+        "menu"
+      ],
+      "composition": {
+        "recipe": "ide",
+        "required_components": [
+          "PageHeader",
+          "StatusTag"
+        ]
+      },
+      "regions": [
+        {
+          "id": "tree",
+          "anchor": "p-04.tree",
+          "title": "大纲树"
+        },
+        {
+          "id": "editor",
+          "anchor": "p-04.editor",
+          "title": "编辑器"
+        },
+        {
+          "id": "panel",
+          "anchor": "p-04.panel",
+          "title": "伴随面板"
+        },
+        {
+          "id": "statusbar",
+          "anchor": "p-04.statusbar",
+          "title": "底部状态栏"
+        }
+      ],
+      "actions": [
+        {
+          "id": "save",
+          "anchor": "p-04.save",
+          "label": "保存"
+        },
+        {
+          "id": "check",
+          "anchor": "p-04.check",
+          "label": "校验"
+        },
+        {
+          "id": "history",
+          "anchor": "p-04.history",
+          "label": "版本历史"
+        },
+        {
+          "id": "publish",
+          "anchor": "p-04.publish",
+          "label": "发布"
+        },
+        {
+          "id": "form-title",
+          "anchor": "p-04.form-title",
+          "label": "名称"
+        },
+        {
+          "id": "form-description",
+          "anchor": "p-04.form-description",
+          "label": "说明"
+        }
+      ],
+      "dynamic_regions": [],
+      "structural_texts": [
+        "实体工作台",
+        "在结构化工作台中维护对象与规则，选中大纲项后编辑并查看校验。",
+        "对象",
+        "规则",
+        "客户",
+        "订单",
+        "商品",
+        "下单校验",
+        "积分计算",
+        "购买商品的个人或组织。",
+        "一次购买的完整记录。",
+        "订单中售卖的最小单元。",
+        "校验订单库存与收货地址。",
+        "按订单金额累计积分。",
+        "基本信息",
+        "关联设置",
+        "名称",
+        "说明",
+        "保存",
+        "校验",
+        "提示",
+        "「商品」缺少唯一标识字段",
+        "「积分计算」未绑定触发时机",
+        "修改后需通过校验才可发布。",
+        "基线 v2.0",
+        "草稿",
+        "已发布",
+        "版本历史",
+        "发布",
+        "取消",
+        "发布工作台",
+        "发布后当前草稿将固化为基线 v2.1，已发布版本不可直接修改。",
+        "v2.0",
+        "v1.9",
+        "v1.8",
+        "当前草稿基线",
+        "新增下单校验规则",
+        "调整客户字段说明",
+        "未配置关联。",
+        "客户可发起多笔订单",
+        "订单包含多个商品明细",
+        "下单前校验订单合法性"
+      ],
+      "states": [
+        "default"
+      ],
+      "mock_dataset": "outline",
+      "acceptance": [
+        "大纲树渲染且树项可选中",
+        "选中驱动编辑器与伴随面板",
+        "发布与版本历史可演示"
+      ]
+    }
+  ]
+}

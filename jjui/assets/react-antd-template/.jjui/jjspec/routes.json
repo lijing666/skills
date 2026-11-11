@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "routes": [
+    {
+      "page_id": "p-01",
+      "route": "/dashboard",
+      "file": "src/pages/p-01-dashboard/index.tsx",
+      "entry": ["menu"]
+    },
+    {
+      "page_id": "p-02",
+      "route": "/customers",
+      "file": "src/pages/p-02-customer-list/index.tsx",
+      "entry": ["menu"]
+    },
+    {
+      "page_id": "p-03",
+      "route": "/canvas",
+      "file": "src/pages/p-03-canvas-editor/index.tsx",
+      "entry": ["menu"]
+    },
+    {
+      "page_id": "p-04",
+      "route": "/workbench",
+      "file": "src/pages/p-04-entity-workbench/index.tsx",
+      "entry": ["menu"]
+    }
+  ]
+}

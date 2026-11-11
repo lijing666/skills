@@ -1,0 +1,24 @@
+{
+  "name": "__PRODUCT_ID__-__BUSINESS__-admin-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "element-plus": "^2.14.8",
+    "@element-plus/icons-vue": "^2.3.1",
+    "@vue-flow/core": "^1.42.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "typescript": "^5.7.2",
+    "vite": "^8.3.7",
+    "vue-tsc": "^3.1.0"
+  }
+}
