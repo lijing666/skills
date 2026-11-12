@@ -43,7 +43,7 @@
 
 > 判据正源：`composition-layer.md` 状态段；本节只写 Element Plus 语法。
 
-- 页级全局信息放 `<el-alert type="success|info|warning|error" :title="..." show-icon />`，位置在 `PageHeader` 之下、相关卡片之上；禁止把说明文字塞进卡片 extra、表头或表格下方。
+- 页级运行时提示用 `<el-alert type="success|info|warning|error" :title="..." show-icon />`；位置与文案归属见 `composition-layer.md` 状态段，静态补充说明走描述行、不属本条。
 
 ## el-dialog 表单用法
 

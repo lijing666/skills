@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Screenshot evidence reconciliation for jjui prototypes.
+"""Baseline screenshot evidence reconciliation for jjui prototypes.
 
-命名契约：<page_id>-<场景>.png（如 p-01-dashboard.png、p-02-customers-empty.png）。
-截图必须用绝对路径落盘到 .jjui/reports/screenshots/，本脚本做逐页对账，
-不依赖 AI 记忆或截图工具的返回消息。
+命名契约：每页恰好 1 张 <page_id>-baseline.png，落 .jjui/reports/screenshots/。
+即时查看的截图落 /tmp 用完即删；工程内物证每轮同名覆盖重拍，不追加场景图。
+本脚本只做确定性对账：命名、非 0 字节，不依赖 AI 记忆或截图工具的返回消息。
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from jjui_lib import read_json
 SCREENSHOTS_DIR = ".jjui/reports/screenshots"
 PAGE_PLAN = ".jjui/page-plan.json"
 MIN_BYTES = 1024  # 低于该值视为可疑截图（空白页/失败输出通常极小）
+BASELINE_SUFFIX = "-baseline.png"
 
 
 def check(root: Path) -> int:
@@ -36,36 +37,36 @@ def check(root: Path) -> int:
         print(f"ERROR: 截图目录缺失: {shots}", file=sys.stderr)
         return 2
 
-    files = sorted(p for p in shots.iterdir() if p.is_file())
-    known_prefixes = tuple(f"{page.get('id', '')}-" for page in pages)
-    stray = [p for p in files if not p.name.startswith(known_prefixes)]
+    # 忽略点文件（macOS Finder 的 .DS_Store、.gitkeep 等），避免命名对账误伤
+    files = sorted(p for p in shots.iterdir() if p.is_file() and not p.name.startswith("."))
+    expected = {f"{page.get('id', '')}{BASELINE_SUFFIX}" for page in pages}
+    stray = [p.name for p in files if p.name not in expected]
 
     missing: list[str] = []
     suspicious: list[str] = []
     ok: list[str] = []
     for page in pages:
         page_id = page.get("id", "")
-        slug = page.get("slug", "")
-        matched = [p for p in files if p.name.startswith(f"{page_id}-")]
-        if not matched:
-            missing.append(f"{page_id}-{slug}.png")
+        name = f"{page_id}{BASELINE_SUFFIX}"
+        baseline = shots / name
+        if not baseline.is_file():
+            missing.append(name)
             continue
-        tiny = [p.name for p in matched if p.stat().st_size < MIN_BYTES]
-        if tiny:
-            suspicious.extend(tiny)
-        else:
-            ok.append(f"{page_id}({len(matched)} 张)")
+        if baseline.stat().st_size < MIN_BYTES:
+            suspicious.append(name)
+            continue
+        ok.append(page_id)
 
     for name in stray:
-        print(f"WARN: 命名不符页面 ID 前缀: {name}")
+        print(f"FAIL: 截图目录存在非 baseline 文件（每页只留 1 张 <page_id>-baseline.png，过程图落 /tmp、场景图导出到工程外）: {name}")
     for name in suspicious:
         print(f"FAIL: 截图过小（疑似空白/失败输出）: {name}")
     for name in missing:
         print(f"FAIL: 页面缺截图物证: {name}")
-    for name in ok:
-        print(f"OK: {name}")
+    for page_id in ok:
+        print(f"OK: {page_id}")
 
-    if missing or suspicious:
+    if stray or missing or suspicious:
         print("EVIDENCE CHECK FAIL")
         return 1
     print("EVIDENCE CHECK PASS")
@@ -75,7 +76,7 @@ def check(root: Path) -> int:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     sub = result.add_subparsers(dest="command", required=True)
-    p_check = sub.add_parser("check", help="逐页对账截图物证")
+    p_check = sub.add_parser("check", help="逐页对账基线截图物证（命名 + 非 0 字节）")
     p_check.add_argument("target", type=Path)
     p_check.set_defaults(func=lambda a: check(a.target))
     return result

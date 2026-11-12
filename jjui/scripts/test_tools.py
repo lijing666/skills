@@ -171,35 +171,41 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("布局文件内联分隔线样式", result.stderr)
 
+    def _write_baselines(self, target, tiny_first=False):
+        plan = json.loads((target / ".jjui/page-plan.json").read_text(encoding="utf-8"))
+        shots = target / ".jjui/reports/screenshots"
+        for i, page in enumerate(plan["pages"]):
+            data = b"\x89PNG" if tiny_first and i == 0 else b"\x89PNG" + b"0" * 2048
+            (shots / f"{page['id']}-baseline.png").write_bytes(data)
+        return shots
+
     def test_evidence_missing_is_reported(self):
         target = self.init_stack("react-antd")
         result = self.run_evidence(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("页面缺截图物证", result.stdout)
 
-    def test_evidence_passes_with_valid_screenshots(self):
+    def test_evidence_passes_with_valid_baselines(self):
         target = self.init_stack("vue3-element-plus")
-        shots = target / ".jjui/reports/screenshots"
-        for name in (
-            "p-01-dashboard.png",
-            "p-02-customers.png",
-            "p-02-customers-empty.png",
-            "p-03-canvas-editor.png",
-            "p-04-entity-workbench.png",
-        ):
-            (shots / name).write_bytes(b"\x89PNG" + b"0" * 2048)
+        self._write_baselines(target)
         result = self.run_evidence(target)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("EVIDENCE CHECK PASS", result.stdout)
 
     def test_evidence_tiny_screenshot_is_rejected(self):
         target = self.init_stack("react-antd")
-        shots = target / ".jjui/reports/screenshots"
-        for name in ("p-01-dashboard.png", "p-02-customers.png"):
-            (shots / name).write_bytes(b"\x89PNG")
+        self._write_baselines(target, tiny_first=True)
         result = self.run_evidence(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("截图过小", result.stdout)
+
+    def test_evidence_nonbaseline_file_is_rejected(self):
+        target = self.init_stack("react-antd")
+        shots = self._write_baselines(target)
+        (shots / "p-01-chain-view.png").write_bytes(b"\x89PNG" + b"0" * 2048)
+        result = self.run_evidence(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("非 baseline 文件", result.stdout)
 
     def test_tool_residue_in_root_is_rejected(self):
         target = self.init_stack("react-antd")

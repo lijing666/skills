@@ -11,7 +11,7 @@
 
 2. **有限组合，不做模板海**
    - 页面不是整页模板，而是由有限配方组成。
-   - 配方是受控扩展清单：当前为 `dashboard`、`list`、`detail`、`form`、`settings`、`workspace`、`canvas`；新增配方须判据、机械校验、模板资产同版本同步落地，不为局部需求临时扩配方。
+   - 配方是受控扩展清单：当前为 `dashboard`、`list`、`detail`、`form`、`settings`、`workspace`、`canvas`、`ide`；新增配方须判据、机械校验、模板资产同版本同步落地，不为局部需求临时扩配方。
    - 新风格通过 token 覆盖解决，不新增模板。
 
 3. **不追求视觉炫技**
@@ -168,8 +168,8 @@
 
 - 内容区块使用 `SectionCard`。
 - 多区域页面（详情、表单、工作台）每个区域一个 `SectionCard`，区块子标题必填（2~6 字名词，如"基本信息""属性列表"），并登记进 page-plan 的 `structural_texts`。
-- **单区块页反向约束**：页面仅一张 `SectionCard` 时（非 canvas/ide 配方）卡不起标题与描述——区块子标题的价值是区分多个区块，单卡页纯属页面标题下的重复层级；页面语义由 `PageHeader` 承载，卡描述承载的补充信息并入 PageHeader 描述行，卡内直接放内容。「区块子标题必填」仅约束多区域页。
-- 子标题风格统一（同字号、同位置）；补充说明放标题下的描述行；禁止小字注释独立充当区域标题。
+- **单区块页反向约束**：页面仅一张 `SectionCard` 时（非 canvas/ide 配方）卡不起标题与描述——区块子标题的价值是区分多个区块，单卡页纯属页面标题下的重复层级；页面语义由 `PageHeader` 承载，卡描述承载的补充信息并入 PageHeader 描述行，卡内直接放内容。并入描述行的是静态业务口径；运行时状态、校验结果、配置生效提示走 `Alert`（见「状态」段），不进描述行。「区块子标题必填」仅约束多区域页。
+- 子标题风格统一（同字号、同位置）；多区域页的静态补充说明放区块子标题下的描述行，页级运行时提示走 `Alert`（见「状态」段）、不落在卡片内；禁止小字注释独立充当区域标题。
 - 区域操作必须落在明确容器内——表格头部/底部用 `Toolbar`，卡片级操作用头部 extra，行内操作用操作列；位置由业务定，禁止漂在无容器归属的缝隙里。
 - 区域顺序与数量与 page-plan 的 `regions` 一致。
 - 卡片有统一圆角、边框、阴影和留白。
@@ -252,7 +252,7 @@
 ### 状态
 
 - 状态语义用 `StatusTag`。
-- 状态分层：行级/控件级状态用 `StatusTag`（表格状态列等）；页级全局信息与提示（系统状态、校验结果、配置说明等）禁止塞进卡片任何位置（extra、表头、表格下方脚注），须用 `Alert`/`el-alert` 放在相关卡片上方、`PageHeader` 之下，按提醒级别选 type（success/info/warning/error），文案登记进 `structural_texts`。
+- 状态分层：行级/控件级状态用 `StatusTag`（表格状态列等）；页级运行时信息与提示（系统状态、校验结果、配置生效提示等）禁止塞进卡片任何位置（extra、表头、表格下方脚注），须用 `Alert`/`el-alert` 放在相关卡片上方、`PageHeader` 之下，按提醒级别选 type（success/info/warning/error），文案登记进 `structural_texts`；静态业务口径与区块补充说明不属此类，归描述行（见「卡片」段）。
 - `StatusTag` 的 `label` 只承载状态词，不得混入含标点的说明句；label 须为字面量状态词——禁止模板串、三元表达式或函数拼接（拼接会绕过标点检查），动态状态词经纯变量/纯函数调用传入；计数说明（"共 N 条 · 显示 M 条"）不是状态词，用次要色文字承载。
 - 状态色只允许 `success`、`warning`、`danger`、`info`、`neutral`。
 - 不用红绿蓝硬编码。
@@ -292,7 +292,7 @@
 - 样式基线含表格卡头两翼布局（`.jjui-table-header` 须 `justify-content: space-between`）。
 - 主操作跟随表格：`mock_rows > 10` 的业务表格页须有表格卡头两翼且左翼含快捷搜索（不分配方）。
 - `PageHeader` 调用片段内出现可交互控件（Button/Select/Input 等）即报——门牌不放操作控件，返回经组件 `onBack` 承载（组件库 text 按钮，非手写 div）。
-- 查询卡（`list` 配方页含 `filters=`/`#filters`）：须用 `layout="inline"`/`:inline` 的 Form 承载（字段自动进入表单项 label 必备检查）；源码出现 `layout="vertical"`/`label-position="top"` 即报 label 竖排；查询卡控件内联 style 写死像素 `width` 即报（宽度走 `--control-width-*` token，字段槽等宽跨行才对齐）。
+- 查询卡（`list` 配方页含 `filters=`/`#filters`）：须用 `layout="inline"`/`:inline` 的 Form 承载（字段自动进入表单项 label 必备检查）；源码出现 `layout="vertical"`/`label-position="top"` 即报 label 竖排；查询卡控件内联 style 写死像素 `width` 即报（宽度走 `--control-width` 单档 token，字段槽等宽跨行才对齐）。
 - 样式基线含门牌 titleline 段（`.jjui-page-header__titleline` 须 `display: flex` + `align-items: center`——返回箭头与标题同行的承载特征）。
 - 描述列表只读：描述项内出现可编辑控件（react `children: <Input/Select/...>`、vue `el-descriptions-item` 嵌 `el-input` 等）即报——编辑态走 Form；描述项 label 含括号说明句同报（label 只承载字段名）。
 - 死按钮对账：登记 action 的控件就近须有交互/反馈信号（onClick/@click/onConfirm/onChange/itemRender/v-model 等），无信号即报死按钮。

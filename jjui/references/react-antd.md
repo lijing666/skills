@@ -51,7 +51,7 @@
 
 > 判据正源：`composition-layer.md` 状态段；本节只写 antd 语法。
 
-- 页级全局信息放 `<Alert type="success|info|warning|error" showIcon message="..." />`，位置在 `PageHeader` 之下、相关卡片之上；禁止把说明文字塞进卡片 extra、表头或表格下方。
+- 页级运行时提示用 `<Alert type="success|info|warning|error" showIcon message="..." />`；位置与文案归属见 `composition-layer.md` 状态段，静态补充说明走描述行、不属本条。
 
 ## Modal 表单用法
 
@@ -67,7 +67,7 @@
 > 判据正源：`composition-layer.md` 主从布局段（右栏宽度纪律）；本节只写 antd 语法。
 
 - antd 6.7.0 实测：Space 与 Steps 的 `orientation="vertical"` 均已实装（DOM 出现 `.ant-space-vertical` / `.ant-steps-vertical`）；`direction` 仍向后兼容但触发废弃警告。纵向排布统一写 `orientation="vertical"`。
-- **静默失败真源是过期 dev server，不是 API**：升级依赖（如 antd 6.7.0）后，长驻的 dev server 仍在用升级前预构建的旧 chunk（`.vite/deps` 内存残留），新 API 全部"看起来未实装"——运行时验证前必须重启 dev server（必要时删 `node_modules/.vite`）。判定进程新鲜度：页面模块 URL 的 `?v=<hash>` 与 `node_modules/.vite/deps/_metadata.json` 的 `browserHash` 不一致即过期。
+- **静默失败真源是过期 dev server，不是 API**：升级依赖（如 antd 6.7.0）后，长驻的 dev server 仍在用升级前预构建的旧 chunk（`.vite/deps` 内存残留），新 API 全部"看起来未实装"——运行时验证前必须重启 dev server（必要时删 `node_modules/.vite`）。
 - Steps 的 `items[].content` 在普通模式实测渲染（6.7.0）；`items[].description` 同样渲染但触发废弃警告，应迁移到 `content`。
 
 ## 画布用法（@xyflow/react）

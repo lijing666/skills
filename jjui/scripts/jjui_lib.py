@@ -496,7 +496,7 @@ def validate_root(root: Path) -> list[str]:
         if recipe == "list" and re.search(r"filters=\{|#filters", source):
             if not re.search(r'layout="inline"|"inline": true|:inline="true"|:inline\b', source):
                 errors.append(f"查询卡字段须用 Form layout=\"inline\" 承载（label 横排左对齐，placeholder 不替代 label）: {page_id}")
-            # 控件宽度走 token（字段槽等宽是跨行对齐的前提；--control-width-* 引用不匹配数字正则。
+            # 控件宽度走 token（字段槽等宽是跨行对齐的前提；--control-width 引用不匹配数字正则。
             # 只查查询卡片段窗口——表格列定义 width、操作列固定宽度是判据要求的合法声明，不能全局误伤）
             fpos = re.search(r"filters=\{|#filters", source)
             fwindow = source[fpos.start():fpos.start() + 1500] if fpos else ""

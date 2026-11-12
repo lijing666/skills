@@ -12,6 +12,8 @@
 | `form` | `PageHeader` + `SectionCard` + `Toolbar` | 新增/编辑用页面、Modal 或 Drawer 须显式登记 |
 | `settings` | `PageHeader` + `SectionCard` | 不接真实保存逻辑 |
 | `workspace` | `PageHeader` + `SectionCard` + `Toolbar` | 仅在确有需要时使用 |
+| `canvas` | `PageHeader` + 画布主编辑面 + 伴随面板 + 底部状态栏 | 图视图库单点豁免，禁卡片堆叠（见 `composition-layer.md` 编辑器型页面段） |
+| `ide` | `PageHeader` + 大纲树 + Tabs 编辑器 + 伴随面板 + 底部状态栏 | 三栏一体容器，禁卡片堆叠（见 `composition-layer.md` 编辑器型页面段） |
 
 ## 页面计划字段
 
