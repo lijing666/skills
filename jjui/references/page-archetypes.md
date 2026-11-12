@@ -34,7 +34,7 @@
 | `structural_texts` | 静态结构文案封闭清单 |
 | `states` | 已实现状态 |
 | `mock_dataset` | 固定数据集 |
-| `mock_rows` | 该页表格数据集行数；含表格的页面必须登记，`> 10` 必须分页（判据见 `composition-layer.md` 表格段） |
+| `mock_rows` | 该页表格数据集行数；含表格的页面必须登记，归类判据 = 页面有无新增类入口（有 → 须分页且 ≥ 25，无 → 才可进免分页白名单，判据见 `composition-layer.md` 表格段判定条） |
 | `composition` | 页面配方与必需组合组件 |
 | `acceptance` | 原型自验项 |
 

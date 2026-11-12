@@ -282,6 +282,42 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("业务数据表格缺分页", result.stderr)
 
+    def test_create_entry_table_with_small_mock_without_pagination_is_rejected(self):
+        # 新增入口 ↔ 分页对账：页面有 create 类 action 时，mock_rows 登记小数字不能规避分页与 ≥25 种子
+        target = self.init_stack("react-antd")
+        plan_path = target / ".jjui/page-plan.json"
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        for pg in plan["pages"]:
+            if pg["id"] == "p-02":
+                pg["mock_rows"] = 8
+        plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page.write_text(page.read_text(encoding="utf-8").replace("<Pagination", "<HiddenPagination"), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("业务数据表格缺分页（页面有新增入口", result.stderr)
+        self.assertIn("mock_rows=8 < 25", result.stderr)
+
+    def test_uniform_action_column_is_rejected(self):
+        # 操作列跨页同质性对账：全站动作文案统一为占位词即拦
+        target = self.init_stack("react-antd")
+        page = target / "src/pages/p-02-customer-list/index.tsx"
+        text = page.read_text(encoding="utf-8")
+        text = text.replace(">编辑</Button>", ">打开详情</Button>").replace(">详情</Button>", ">打开详情</Button>")
+        page.write_text(text, encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("操作列文案全站同质", result.stderr)
+
+    def test_return_control_inside_tabs_is_rejected(self):
+        # 嵌入式详情返回控件落位：返回文案出现在 Tabs 起始窗口内即拦
+        target = self.init_stack("react-antd")
+        page = target / "src/pages/p-04-entity-workbench/index.tsx"
+        page.write_text(page.read_text(encoding="utf-8").replace("<Tabs", '<Tabs data-probe="返回列表"'), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("返回控件禁止混入 Tabs 区", result.stderr)
+
     def test_unregistered_menu_mount_is_rejected(self):
         target = self.init_stack("react-antd")
         plan_path = target / ".jjui/page-plan.json"

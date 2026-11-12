@@ -265,6 +265,7 @@ def validate_root(root: Path) -> list[str]:
     seen_ids, seen_routes, seen_files = set(), set(), set()
     all_page_ids = {page.get("id") for page in pages if isinstance(page, dict)}
     page_meta: dict = {}
+    op_texts: list = []  # 跨页操作列文案采集（循环内逐页收集，循环后做全站同质性对账）
     route_rows = routes.get("routes") if isinstance(routes, dict) else None
     if not isinstance(route_rows, list) or len(route_rows) != len(pages):
         errors.append("route registry 数量须与 page-plan.pages 一致")
@@ -313,23 +314,37 @@ def validate_root(root: Path) -> list[str]:
         for text in page.get("structural_texts", []):
             if text not in source:
                 errors.append(f"页面缺计划内结构文案: {page_id} {text}")
-        # 表格分页对账（判据正源: references/composition-layer.md 表格段）
+        # 表格分页对账（判据正源: references/composition-layer.md 表格段——归类判据 = 页面有无新增类入口，
+        # 数据可经 UI 增长即业务记录必须分页；当前种子数量不是免分页依据，少就补种子）
         if re.search(spec["table_re"], source):
             mock_rows = page.get("mock_rows")
-            if not isinstance(mock_rows, int) or mock_rows <= 0:
-                errors.append(f"表格页缺 mock_rows 登记（该页表格数据集行数）: {page_id}")
-            elif mock_rows > 10:
+            # 新增入口判定：page-plan actions 登记项的 id/anchor/label 命中新增类语义
+            has_create = any(
+                re.search(r"新建|新增|创建|添加|录入|create|add\b", str(a.get(k) or ""), re.IGNORECASE)
+                for a in page.get("actions", []) if isinstance(a, dict)
+                for k in ("id", "anchor", "label")
+            )
+            if has_create:
+                if not isinstance(mock_rows, int) or mock_rows <= 0:
+                    errors.append(f"业务记录表格页缺 mock_rows 登记（页面有新增入口，数据可经 UI 增长，须登记行数并分页）: {page_id}")
+                else:
+                    if mock_rows < 25:
+                        errors.append(f"业务记录表格 mock_rows={mock_rows} < 25（页面有新增入口，种子须 ≥ 25 保证分页器可见、翻页可演示）: {page_id}")
+                    if not re.search(spec["pagination_re"], source):
+                        errors.append(f"业务数据表格缺分页（页面有新增入口，须 pageSize=10 且显示总数）: {page_id}")
+                    # antd 分页须 itemRender 自组带边框文字上下页（判据正源: references/composition-layer.md 表格段）
+                    if spec["component"] == "antd" and "itemRender" not in source:
+                        errors.append(f"antd 分页须用 itemRender 自组带边框文字上下页（不用内置小箭头/裸文字）: {page_id}")
+                    # 主操作跟随表格（判据正源: references/composition-layer.md 页面段——不分配方，业务表格须卡头两翼+左翼快捷搜索）
+                    header_pos = source.find("jjui-table-header")
+                    if header_pos < 0:
+                        errors.append(f"业务表格须用表格卡头两翼结构（.jjui-table-header：主操作+快捷搜索在左，配置图标在右）: {page_id}")
+                    elif not re.search(r"<Input\b|<el-input\b", source[header_pos:header_pos + 1200]):
+                        errors.append(f"业务表格卡头缺左翼快捷搜索（左翼主操作+即时过滤输入框，右翼配置图标）: {page_id}")
+            elif isinstance(mock_rows, int) and mock_rows > 10:
+                # 无新增入口但登记行数 > 10：仍须分页（登记量已超出免分页白名单量级）
                 if not re.search(spec["pagination_re"], source):
                     errors.append(f"业务数据表格缺分页（mock_rows={mock_rows} > 10，须 pageSize=10 且显示总数）: {page_id}")
-                # antd 分页须 itemRender 自组带边框文字上下页（判据正源: references/composition-layer.md 表格段）
-                if spec["component"] == "antd" and "itemRender" not in source:
-                    errors.append(f"antd 分页须用 itemRender 自组带边框文字上下页（不用内置小箭头/裸文字）: {page_id}")
-                # 主操作跟随表格（判据正源: references/composition-layer.md 页面段——不分配方，业务表格须卡头两翼+左翼快捷搜索）
-                header_pos = source.find("jjui-table-header")
-                if header_pos < 0:
-                    errors.append(f"业务表格须用表格卡头两翼结构（.jjui-table-header：主操作+快捷搜索在左，配置图标在右）: {page_id}")
-                elif not re.search(r"<Input\b|<el-input\b", source[header_pos:header_pos + 1200]):
-                    errors.append(f"业务表格卡头缺左翼快捷搜索（左翼主操作+即时过滤输入框，右翼配置图标）: {page_id}")
 
         # 可交互控件对账（判据正源: references/page-archetypes.md 操作与状态段）
         control_count = len(re.findall(spec["control_re"], source))
@@ -447,6 +462,13 @@ def validate_root(root: Path) -> list[str]:
                 errors.append(f"ide 页大纲树项锚点缺失（可选中对象须带 data-jjui-node）: {page_id}")
             if recipe == "ide" and not re.search(r"<Tabs\b|<el-tabs\b", source):
                 errors.append(f"ide 页编辑器须用 Tabs/el-tabs 分区（消除右栏纵向长滚动）: {page_id}")
+            # 嵌入式详情返回控件落位（判据正源: composition-layer.md 编辑器型页面段——
+            # 返回控件落位编辑器面板页头行左端（← 图标 + 文案，与 PageHeader titleline 同型），禁混入 Tabs 标签行）
+            tpos = re.search(r"<Tabs\b|<el-tabs\b", source)
+            if tpos and re.search(r"返回", source[tpos.start():tpos.start() + 2000]):
+                errors.append(
+                    f"返回控件禁止混入 Tabs 区（落位编辑器面板页头行左端：← 图标 + 文案，与 PageHeader 返回导航同型）: {page_id}"
+                )
             for m in re.finditer(obj_re, source):
                 window = source[max(0, m.start() - 600):m.end() + 600]
                 if not re.search(r"onClick|@click|onNodeClick|onEdgeClick|onSelect|onSelectChange", window):
@@ -540,6 +562,14 @@ def validate_root(root: Path) -> list[str]:
                     break
             if re.search(r"<Button\b[^>\n]{0,120}\bdisabled\b", owin):
                 errors.append(f"操作列当前行不可执行的动作不渲染（列宁毋假，禁 disabled 灰字）: {page_id}")
+            # 跨页操作列文案采集（全站同质性对账在循环后汇总，判据正源: composition-layer.md 表格段操作列条；
+            # 复用 btn_starts 分段——按钮属性含箭头函数 => 会截断单正则，须逐段取 </Button> 前文字）
+            for i, s in enumerate(btn_starts[:-1]):
+                tm = re.search(r">([^<>{}]+)</Button>", owin[s:btn_starts[i + 1]])
+                if tm:
+                    t = tm.group(1).strip()
+                    if t and t != "更多":
+                        op_texts.append(t)
         op_vue = re.search(r'label="操作"', source)
         if op_vue:
             owin = source[op_vue.start():op_vue.start() + 700]
@@ -550,6 +580,14 @@ def validate_root(root: Path) -> list[str]:
                     break
             if re.search(r"<el-button\b[^>\n]{0,120}\bdisabled\b", owin):
                 errors.append(f"操作列当前行不可执行的动作不渲染（列宁毋假，禁 disabled 灰字）: {page_id}")
+            # 跨页操作列文案采集（全站同质性对账在循环后汇总，判据正源: composition-layer.md 表格段操作列条；
+            # 复用 btn_starts 分段——属性含箭头函数 => 会截断单正则，须逐段取 </el-button> 前文字）
+            for i, s in enumerate(btn_starts[:-1]):
+                tm = re.search(r">([^<>{}]+)</el-button>", owin[s:btn_starts[i + 1]])
+                if tm:
+                    t = tm.group(1).strip()
+                    if t and t != "更多":
+                        op_texts.append(t)
         # 描述列表只读（判据正源: references/composition-layer.md 弹性窄栏段——Descriptions 是只读呈现，
         # 描述项塞可编辑控件即报；column=1 只是避免挤压，不改变只读语义）
         if re.search(r"children:\s*<(?:Input(?:\.TextArea)?|Select|Switch|DatePicker|InputNumber|Radio|Checkbox)\b", source) or \
@@ -595,6 +633,24 @@ def validate_root(root: Path) -> list[str]:
             "source": source,
             "datasets": {d.get("dataset") for d in page.get("dynamic_regions", []) if isinstance(d, dict)},
         }
+
+    # 操作列跨页同质性对账（判据正源: references/composition-layer.md 表格段操作列条——
+    # 动作文案按页面业务语义命名并来自 page-plan actions 登记，禁止全站统一占位文案）
+    if op_texts:
+        counts = {}
+        for t in op_texts:
+            counts[t] = counts.get(t, 0) + 1
+        total = len(op_texts)
+        top_text = max(counts, key=lambda k: counts[k])
+        top_n = counts[top_text]
+        if total >= 2 and len(counts) == 1:
+            errors.append(
+                f"操作列文案全站同质（{total} 处全部为「{top_text}」）：动作须按页面业务语义命名并来自 page-plan actions 登记，禁止全站统一占位文案"
+            )
+        elif total >= 5 and top_n / total > 0.6:
+            errors.append(
+                f"操作列文案高度同质（「{top_text}」占 {top_n}/{total}）：动作须按页面业务语义命名，禁止单一占位文案贯穿全站"
+            )
 
     if isinstance(excluded, dict) and not isinstance(excluded.get("excluded"), list):
         errors.append("excluded-pages.excluded 须为数组")

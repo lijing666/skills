@@ -2,7 +2,7 @@
 name: jjui
 description: "管理后台前端原型生成 skill：基于 React+Ant Design 或 Vue3+Element Plus 生成可运行、可冻结、可直接接入 jjspec HTML 原型路线的后台原型工程。适用于客户/订单/运营/配置类后台、列表-详情-表单-设置页面，以及需要用真实组件库替代手绘页面、并把原型交付给 jjspec 做后续 UI 规范与实现验收的场景；不适用于营销页、小程序、移动端、图片像素级还原、真实后端或生产级架构。"
 metadata:
-  version: 0.2.32
+  version: 0.2.33
   created: "2026-11-08"
 ---
 
@@ -34,7 +34,7 @@ metadata:
 
 1. **范围判定**：确认是管理后台前端原型；非后台需求拒绝本技能。
 2. **技术栈确认**：显式选择 `react-antd` 或 `vue3-element-plus`；未选择时停靠询问。
-3. **页面计划封闭**：读取 `references/page-archetypes.md`，列出页面、路由、菜单、字段、操作、状态、Mock 数据和假设；模糊处集中确认。
+3. **页面计划封闭**：读取 `references/page-archetypes.md`，列出页面、路由、菜单、字段、操作、状态、Mock 数据和假设；含表格的页面按「有无新增类入口」归类业务记录/免分页白名单（判据见 `composition-layer.md` 表格段），归类歧义处批量停靠交用户确认。
 4. **初始化工程**：运行 `scripts/init_prototype.py` 从对应模板复制工程；先读 `references/prototype-contract.md`。
 5. **实现页面**：按栈读 `references/react-antd.md` 或 `references/vue3-element-plus.md`；按页面计划的 `composition.recipe` 用组合层组件排布，再以组件库组件填充内容。
 6. **锚点与分层**：给页面、区域、操作、动态区加稳定 `data-jjui-*` 锚点；静态结构文案入页面计划，动态数据放显式 `data-jjui-data` 区。
