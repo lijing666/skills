@@ -87,6 +87,23 @@ def anchor_ok(value: str) -> bool:
     return bool(ANCHOR_RE.match(value or ""))
 
 
+def table_header_window(source: str, header_pos: int) -> str:
+    """提取 .jjui-table-header 卡头元素窗口（div 嵌套配对截取，避免固定窗口越界误伤表体文案）。"""
+    start = source.rfind("<div", 0, header_pos)
+    if start < 0:
+        return source[header_pos:header_pos + 1200]
+    depth = 0
+    for m in re.finditer(r"<div\b|</div>", source[start:]):
+        if m.group(0) == "</div>":
+            depth -= 1
+            if depth == 0:
+                # finditer 在切片上匹配，m.end() 是相对切片的偏移，须加回 start
+                return source[start:start + m.end()]
+        else:
+            depth += 1
+    return source[start:start + 1200]
+
+
 def replace_tokens(root: Path, product_id: str, business: str) -> None:
     replacements = {"__PRODUCT_ID__": product_id, "__BUSINESS__": business, "__JJUI_VERSION__": SKILL_VERSION}
     for path in root.rglob("*"):
@@ -627,6 +644,17 @@ def validate_root(root: Path) -> list[str]:
             and re.search(r"列设置|列配置|刷新", source)
         ):
             errors.append(f"表级配置操作（刷新/列设置）漂在表格卡外——须进 .jjui-table-header 右翼，禁止在表格上方另起独立工具条: {page_id}")
+        # 卡头禁描述性标题（判据正源: references/composition-layer.md 工具栏段——卡头只承载操作与搜索，
+        # 「XX列表/清单」类描述文字由 PageHeader/区块子标题承载；剥掉按钮后查非按钮文本，任何配方通用）
+        if re.search(spec["table_re"], source) and "jjui-table-header" in source:
+            header_frag = table_header_window(source, source.find("jjui-table-header"))
+            header_wo_buttons = re.sub(r"<Button\b.*?</Button>|<el-button\b.*?</el-button>", "", header_frag, flags=re.S)
+            title_hit = re.search(r">\s*([^<>{}\n]{1,16}(?:列表|清单))\s*<", header_wo_buttons)
+            if title_hit:
+                errors.append(
+                    f"表格卡头禁描述性标题文字（「{title_hit.group(1)}」）——卡头左翼只放主操作+快捷搜索，"
+                    f"列表语义由 PageHeader 页面标题或多区块页区块子标题承载: {page_id}"
+                )
         page_meta[page_id] = {
             "route": route,
             "entry": expected_entry,

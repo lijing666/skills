@@ -2,7 +2,7 @@
 name: jjui
 description: "管理后台前端原型生成 skill：基于 React+Ant Design 或 Vue3+Element Plus 生成可运行、可冻结、可直接接入 jjspec HTML 原型路线的后台原型工程。适用于客户/订单/运营/配置类后台、列表-详情-表单-设置页面，以及需要用真实组件库替代手绘页面、并把原型交付给 jjspec 做后续 UI 规范与实现验收的场景；不适用于营销页、小程序、移动端、图片像素级还原、真实后端或生产级架构。"
 metadata:
-  version: 0.2.33
+  version: 0.2.34
   created: "2026-11-08"
 ---
 

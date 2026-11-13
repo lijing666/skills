@@ -318,6 +318,37 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("返回控件禁止混入 Tabs 区", result.stderr)
 
+    def test_table_header_descriptive_title_is_rejected(self):
+        # 卡头禁描述性标题：卡头内非按钮文本以「列表/清单」结尾即拦（判据正源: composition-layer.md 工具栏段）
+        target = self.init_stack("react-antd")
+        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page.write_text(page.read_text(encoding="utf-8").replace(
+            '<div className="jjui-table-header">',
+            '<div className="jjui-table-header"><span className="jjui-x">对象类型列表</span>'
+            '<Button type="primary">同步清单</Button>'
+        ), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("表格卡头禁描述性标题", result.stderr)
+        self.assertIn("对象类型列表", result.stderr)
+        # Button 内文字不触发本条（卡头按钮文案可含列表字样，如「导出清单」）
+        self.assertNotIn("同步清单", result.stderr)
+
+    def test_table_header_descriptive_title_vue_is_rejected(self):
+        # vue 栈同判据：el-button 剥离后查非按钮文本
+        target = self.init_stack("vue3-element-plus")
+        page = target / "src/pages/p-02-customer-list/index.vue"
+        page.write_text(page.read_text(encoding="utf-8").replace(
+            '<div class="jjui-table-header">',
+            '<div class="jjui-table-header"><span class="jjui-x">对象类型清单</span>'
+            '<el-button type="primary">同步列表</el-button>'
+        ), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("表格卡头禁描述性标题", result.stderr)
+        self.assertIn("对象类型清单", result.stderr)
+        self.assertNotIn("同步列表", result.stderr)
+
     def test_unregistered_menu_mount_is_rejected(self):
         target = self.init_stack("react-antd")
         plan_path = target / ".jjui/page-plan.json"
