@@ -17,8 +17,11 @@ admin-prototypes/<产品ID>-<业务大项>/
 │   ├── layouts/
 │   ├── router/
 │   ├── pages/
+│   │   └── <page_id>/
+│   │       ├── index.tsx / index.vue
+│   │       └── features/
+│   ├── services/
 │   ├── components/
-│   ├── mock/
 │   ├── styles/
 │   └── custom/
 └── .jjui/
@@ -35,6 +38,7 @@ admin-prototypes/<产品ID>-<业务大项>/
 
 - `package-lock.json` 在安装后必须存在；模板阶段可以暂缺，交付阶段必须有。
 - `src/custom/` 是使用者扩展区；模板再生成不得覆盖。
+- `src/pages/<page_id>/features/` 与 `src/services/` 是页面内分层的落位（Feature 与 Service），拆分判据正源在 `page-splitting.md`；page-plan `features` 登记与 `features/` 目录双向对账。
 - `.jjui/reports/` 存本技能自验截图与烟测记录，不冒充 jjspec 的 `baselines/`。
 
 ## 截图物证纪律
@@ -92,6 +96,7 @@ playwright-cli、agent-browser 等工具的快照 dump 和会话目录默认落�
 | `title` | 业务标题 |
 | `route` | 渲染可达路由 |
 | `file` | 页面源文件 |
+| `features` | Feature 清单（`id` + `file`），与页面 `features/` 目录双向对账；拆分判据见 `page-splitting.md` |
 | `expected_entry` | 预期到达方式，值域同 jjspec：`menu` / `internal-tab` / `internal-entry` / `drawer` / `modal` / `unreachable` |
 | `master_ref` | 主记录来源页 ID 或 `fixed:<数据集>`；承载主记录详情的页面必须登记，约束见 `composition-layer.md` 详情呈现段 |
 | `regions` | 页面区域与锚点 |

@@ -316,6 +316,56 @@ def validate_root(root: Path) -> list[str]:
             continue
         if f'data-jjui-page="{page_id}"' not in source:
             errors.append(f"页面缺稳定页锚点: {page_id}")
+        # 页面内分层（判据正源: references/page-splitting.md）——features 双向对账 + 合并源扫描。
+        # 锚点/结构文案/组件使用等页面级对账按「入口 + 全部 Feature 合并源」执行
+        feature_dir = file_path.parent / "features"
+        registered_features = page.get("features", [])
+        if not isinstance(registered_features, list):
+            errors.append(f"page-plan features 须为数组: {page_id}")
+            registered_features = []
+        features_prefix = str((file_path.parent / "features").relative_to(root)) + "/"
+        registered_map: dict[str, Path] = {}
+        for feat in registered_features:
+            if not isinstance(feat, dict) or not feat.get("id") or not feat.get("file"):
+                errors.append(f"features 登记项须含 id 与 file: {page_id}")
+                continue
+            feat_rel = str(feat["file"])
+            feat_path = root / feat_rel
+            if not feat_rel.startswith(features_prefix):
+                errors.append(f"features 登记文件不在本页 features/ 目录: {page_id} {feat_rel}")
+            if feat_rel == file_rel:
+                errors.append(f"features 登记文件不得与页面入口文件重复: {page_id}")
+            if feat_rel in seen_files:
+                errors.append(f"页面/Feature 文件重复: {feat_rel}")
+            seen_files.add(feat_rel)
+            registered_map[feat_rel] = feat_path
+            if not feat_path.is_file():
+                errors.append(f"features 登记文件缺失（page-plan.features 与目录双向对账）: {page_id} {feat_rel}")
+        if feature_dir.is_dir():
+            for feat_path in sorted(feature_dir.iterdir()):
+                if not feat_path.is_file():
+                    continue
+                feat_rel = str(feat_path.relative_to(root))
+                if feat_rel not in registered_map:
+                    errors.append(f"features/ 目录存在未登记文件（page-plan.features 与目录双向对账）: {page_id} {feat_rel}")
+        # 入口文件禁内联封闭交互单元实现体（判据正源: references/page-splitting.md Feature 拆分判据——
+        # 入口只做装配；Page 级页态 Alert 不属浮层，不在此列）
+        if spec["ext"] == ".tsx":
+            inline_unit_re = r"<Drawer\b|<Modal\b|<Tabs\b"
+        else:
+            inline_unit_re = r"<el-drawer\b|<el-dialog\b|<el-tabs\b"
+        if re.search(inline_unit_re, source):
+            errors.append(
+                f"页面入口文件禁内联 Drawer/Modal/Tabs 实现体（封闭交互单元拆 features/ 并登记 page-plan.features，入口只做装配）: {page_id}"
+            )
+        for feat_rel, feat_path in registered_map.items():
+            if not feat_path.is_file():
+                continue
+            try:
+                source += "\n" + feat_path.read_text(encoding="utf-8")
+            except Exception as exc:
+                errors.append(f"Feature 文件不可读: {feat_rel}: {exc}")
+
         for region in page.get("regions", []):
             anchor = region.get("anchor", "")
             if not anchor_ok(anchor) or f'data-jjui-region="{anchor}"' not in source:
@@ -811,6 +861,12 @@ def validate_root(root: Path) -> list[str]:
                 continue
             if "http://" in text or "https://" in text:
                 errors.append(f"源码含外部 URL: {path.relative_to(root)}")
+            # 服务层单源（判据正源: references/page-splitting.md Service 契约）——
+            # mock 形态收敛为 src/services 服务层，页面/Feature/组件禁止直接 import src/mock/*（services 内部装配豁免）
+            if "services" not in path.relative_to(root).parts and re.search(r"""["'][^"']*/mock/[^"']+["']""", text):
+                errors.append(
+                    f"禁止 import src/mock/*（数据契约收敛为 src/services 服务层 async 接口，页面与 Feature 不直接消费数据种子）: {path.relative_to(root)}"
+                )
 
     if "__PRODUCT_ID__" in json.dumps(manifest) or "__BUSINESS__" in json.dumps(manifest) or "__JJUI_VERSION__" in json.dumps(manifest):
         errors.append("manifest 仍含初始化占位符")

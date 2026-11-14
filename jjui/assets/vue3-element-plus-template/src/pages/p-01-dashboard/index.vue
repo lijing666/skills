@@ -45,10 +45,25 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue";
 import { MetricCard, PageHeader, SectionCard } from "../../components/admin";
-import { customerMetrics, customers } from "../../mock/customers";
+import { listCustomers, type Customer } from "../../services/customer-service";
 
-const recentCustomers = customers.slice(0, 3);
+// 页级数据装配走 Service（判据正源: references/page-splitting.md——页面只消费 async 接口）
+const rows = ref<Customer[]>([]);
+const loading = ref(true);
+onMounted(async () => {
+  rows.value = await listCustomers();
+  loading.value = false;
+});
+
+// 客户指标：无写操作，从列表派生（不单独建写服务）
+const customerMetrics = computed(() => [
+  { label: "客户总数", value: rows.value.length },
+  { label: "启用客户", value: rows.value.filter((item) => item.status === "active").length },
+  { label: "停用客户", value: rows.value.filter((item) => item.status === "inactive").length }
+]);
+const recentCustomers = computed(() => rows.value.slice(0, 3));
 </script>
 
 <style scoped>

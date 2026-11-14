@@ -80,6 +80,10 @@
 - `required_components` 必须真实出现在页面源文件中。
 - 不允许 page-plan 声明组件但页面实际手写。
 
+### 4. 页面内部分层
+
+页面目录内部按 Page / Feature / Service / Shared 四层落位（入口装配、封闭交互单元、服务契约、组合组件）；何时拆 Feature、Service 契约与修改前归属判定，判据正源在 `references/page-splitting.md`——实现含 Tab 分区、抽屉/弹框表单、画布与伴随面板的页面，或对既有页面增量修改前先读该正源，此处不复述判据。
+
 ## 三、视觉规则
 
 ### 主从布局

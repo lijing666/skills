@@ -2,7 +2,7 @@
 name: jjui
 description: "管理后台前端原型生成 skill：基于 React+Ant Design 或 Vue3+Element Plus 生成可运行、可冻结、可直接接入 jjspec HTML 原型路线的后台原型工程。适用于客户/订单/运营/配置类后台、列表-详情-表单-设置页面，以及需要用真实组件库替代手绘页面、并把原型交付给 jjspec 做后续 UI 规范与实现验收的场景；不适用于营销页、小程序、移动端、图片像素级还原、真实后端或生产级架构。"
 metadata:
-  version: 0.2.34
+  version: 0.2.35
   created: "2026-11-08"
 ---
 
@@ -36,7 +36,7 @@ metadata:
 2. **技术栈确认**：显式选择 `react-antd` 或 `vue3-element-plus`；未选择时停靠询问。
 3. **页面计划封闭**：读取 `references/page-archetypes.md`，列出页面、路由、菜单、字段、操作、状态、Mock 数据和假设；含表格的页面按「有无新增类入口」归类业务记录/免分页白名单（判据见 `composition-layer.md` 表格段），归类歧义处批量停靠交用户确认。
 4. **初始化工程**：运行 `scripts/init_prototype.py` 从对应模板复制工程；先读 `references/prototype-contract.md`。
-5. **实现页面**：按栈读 `references/react-antd.md` 或 `references/vue3-element-plus.md`；按页面计划的 `composition.recipe` 用组合层组件排布，再以组件库组件填充内容。
+5. **实现页面**：先读 `references/page-splitting.md` 做页面内四层归属判定（Page / Feature / Service / Shared），Service 契约落 `src/services/`，封闭交互单元落 `features/`；再按栈读 `references/react-antd.md` 或 `references/vue3-element-plus.md`；按页面计划的 `composition.recipe` 用组合层组件排布，以组件库组件填充内容。
 6. **锚点与分层**：给页面、区域、操作、动态区加稳定 `data-jjui-*` 锚点；静态结构文案入页面计划，动态数据放显式 `data-jjui-data` 区。
 7. **机械校验**：运行 `scripts/check_prototype.py <原型目录>`；修复到 PASS。
 8. **实跑验证**：按 manifest 启动工程，逐页实跑，确认无控制台错误、页面不空白、声明交互可演示；每页只留 1 张 `<page_id>-baseline.png`（绝对路径 `.jjui/reports/screenshots/`），重拍时**同名覆盖**；即时查看的截图落 `/tmp` 看完即删，不进工程目录；场景证据按评审需要临时导出到工程外（走截图物证纪律）。每张落盘后立即核验存在且非 0 字节；交付前用 `scripts/evidence.py check` 逐页对账（命名 + 非 0 字节）。交互演示一律用 playwright 原生 click/fill 等真实输入事件，禁止 JS `el.click()` 注入点击——antd 等组件的事件可能不响应注入点击，会误判交互失效。**升级依赖后必须重启 dev server 再验证**（旧进程的 `.vite/deps` 预构建残留会静默供给旧版组件，让新 API"看起来未实装"；必要时删 `node_modules/.vite`）。
@@ -49,10 +49,11 @@ metadata:
 触发：任何对既有原型工程（含 `.jjui/` 目录的工程）的改动请求，无论多小——改样式、改文案、加按钮都算；不得绕过本工作流直接改代码。
 
 1. 先改 `.jjui/page-plan.json`，登记新增/修改/删除页面、字段、操作、状态和 `composition` 契约。
-2. 只修改受影响页面及必要共享模块；不重写 `src/custom/`。
-3. 不切换技术栈、不重排页面 ID。
-4. 重跑 `check_prototype.py` 与受影响页面的实跑验证；check FAIL 时不得交付，修复到 PASS 为止。
-5. 交付增量对账清单，标明未受影响页面；如过程中发现与技能判据冲突的组件库事实，一并输出"规范坑回流清单"。
+2. **修改前分析**：读入口文件与已登记 `features/`，判定改动归属——归属既有 Feature 只改该文件；新职责新建 Feature 并登记 `features`；禁止直接向入口文件追加油浮层、Tab pane、伴随面板实现体（判据正源: `references/page-splitting.md` 修改前分析段）。
+3. 只修改受影响页面及必要共享模块；不重写 `src/custom/`。
+4. 不切换技术栈、不重排页面 ID。
+5. 重跑 `check_prototype.py` 与受影响页面的实跑验证；check FAIL 时不得交付，修复到 PASS 为止。
+6. 交付增量对账清单，标明未受影响页面；如过程中发现与技能判据冲突的组件库事实，一并输出"规范坑回流清单"。
 
 ## 工作流 C：规范对齐巡检
 
@@ -68,6 +69,7 @@ metadata:
 | 资源 | 何时使用 |
 |---|---|
 | `references/composition-layer.md` | 实现页面、扩展组合组件或调整样式基线时 |
+| `references/page-splitting.md` | 页面内四层拆分（Feature / Service 归属判定）或对既有页面增量修改前 |
 | `references/prototype-contract.md` | 初始化、调整目录、manifest/page-plan/bridge 或锚点时 |
 | `references/page-archetypes.md` | 做页面封闭清单或判定页面类型时 |
 | `references/react-antd.md` | React 路线实现页面时 |

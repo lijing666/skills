@@ -11,10 +11,13 @@ import {
 } from "@vue-flow/core";
 import "@vue-flow/core/dist/style.css";
 import { ElMessage } from "element-plus";
-import type { FormInstance, FormRules } from "element-plus";
 import { PageHeader, StatusTag } from "../../components/admin";
+import EntityEditModal from "./features/entity-edit-modal.vue";
+import StatusDialogs from "./features/status-dialogs.vue";
 
 // 画布页（判据正源: composition-layer.md 画布段；语法: vue3-element-plus.md 画布段）
+// 入口只做装配（判据正源: references/page-splitting.md）：画布 + 伴随面板 + 状态栏；
+// 弹框表单与状态栏附属浮层是封闭交互单元，落 features/
 // 三区一体：画布主编辑面 + 伴随面板 + 底部状态栏；节点/边可选中驱动伴随面板
 
 type EntityData = {
@@ -44,12 +47,6 @@ const RELATIONS = [
 const ISSUES = [
   { target: "商品", text: "「商品」缺少主键属性" },
   { target: "订单", text: "「订单」到「商品」的关系未标注基数" }
-];
-
-const VERSIONS = [
-  { version: "v1.4", note: "当前草稿基线" },
-  { version: "v1.3", note: "新增商品实体" },
-  { version: "v1.2", note: "调整下单关系基数" }
 ];
 
 const nodes = ref(
@@ -82,14 +79,9 @@ const labelPos = (props: EdgeProps) => [getBezierPath(props)[1], getBezierPath(p
 const published = ref(false);
 const publishOpen = ref(false);
 const historyOpen = ref(false);
-// 伴随面板编辑：弹框表单 + 校验 + 写回 mock（判据: composition-layer.md 表单段）
-const formRef = ref<FormInstance>();
+// 伴随面板编辑：弹框表单为封闭交互单元落 features/（判据正源: references/page-splitting.md），初始值经 props 下发
 const editOpen = ref(false);
-const editForm = ref({ label: "", description: "" });
-const editRules: FormRules = {
-  label: [{ required: true, message: "请输入实体名称" }],
-  description: [{ required: true, message: "请输入实体说明" }]
-};
+const editInitial = ref<{ label: string; description: string } | null>(null);
 
 const runCheck = () => {
   ElMessage.info(`校验完成：${ISSUES.length} 项待处理`);
@@ -97,20 +89,17 @@ const runCheck = () => {
 const openEdit = () => {
   const entity = selectedEntity();
   if (!entity) return;
-  editForm.value = { label: entity.label, description: entity.description };
+  editInitial.value = { label: entity.label, description: entity.description };
   editOpen.value = true;
 };
-const submitEdit = () => {
-  formRef.value?.validate((valid) => {
-    if (!valid) return;
-    nodes.value = nodes.value.map((node) =>
-      node.id === selectedId.value
-        ? { ...node, data: { ...node.data, label: editForm.value.label, description: editForm.value.description } }
-        : node
-    );
-    ElMessage.success(`已保存实体「${editForm.value.label}」（mock 数据）`);
-    editOpen.value = false;
-  });
+const submitEdit = (values: { label: string; description: string }) => {
+  nodes.value = nodes.value.map((node) =>
+    node.id === selectedId.value
+      ? { ...node, data: { ...node.data, label: values.label, description: values.description } }
+      : node
+  );
+  ElMessage.success(`已保存实体「${values.label}」（mock 数据）`);
+  editOpen.value = false;
 };
 // StatusTag label 须为字面量状态词或纯变量（判据: composition-layer.md 状态段）
 const statusLabel = computed(() => (published.value ? "已发布" : "草稿"));
@@ -119,7 +108,7 @@ const scrollEl = ref<HTMLElement | null>(null);
 onMounted(() => {
   scrollEl.value = document.querySelector(".admin-layout__content");
 });
-const publish = () => {
+const publishCanvas = () => {
   published.value = true;
   publishOpen.value = false;
   ElMessage.success("画布草稿已发布（mock 数据）");
@@ -202,39 +191,19 @@ const publish = () => {
       </el-affix>
     </div>
 
-    <el-dialog v-model="editOpen" title="编辑实体属性" width="480px">
-      <el-form ref="formRef" :model="editForm" :rules="editRules" label-position="left" label-width="var(--form-label-width)">
-        <el-form-item label="名称" prop="label">
-          <el-input v-model="editForm.label" data-jjui-action="p-03.form-label" placeholder="请输入实体名称" />
-        </el-form-item>
-        <el-form-item label="说明" prop="description">
-          <el-input v-model="editForm.description" data-jjui-action="p-03.form-description" placeholder="请输入实体说明" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-space :size="8">
-          <el-button data-jjui-action="p-03.edit-cancel" @click="editOpen = false">取消</el-button>
-          <el-button type="primary" data-jjui-action="p-03.edit-submit" @click="submitEdit">保存</el-button>
-        </el-space>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="publishOpen" title="发布画布" width="480px">
-      <p>发布后当前草稿将固化为基线 v1.5，已发布版本不可直接修改。</p>
-      <template #footer>
-        <el-space :size="8">
-          <el-button data-jjui-action="p-03.publish-cancel" @click="publishOpen = false">取消</el-button>
-          <el-button type="primary" data-jjui-action="p-03.publish-submit" @click="publish">发布</el-button>
-        </el-space>
-      </template>
-    </el-dialog>
-
-    <el-drawer v-model="historyOpen" title="版本历史">
-      <div v-for="item in VERSIONS" :key="item.version" class="jjui-history-row">
-        <span>{{ item.version }}</span>
-        <span class="jjui-pagination__meta">{{ item.note }}</span>
-      </div>
-    </el-drawer>
+    <EntityEditModal
+      :open="editOpen"
+      :initial="editInitial"
+      @submit="submitEdit"
+      @cancel="editOpen = false"
+    />
+    <StatusDialogs
+      :publish-open="publishOpen"
+      :history-open="historyOpen"
+      @publish="publishCanvas"
+      @publish-cancel="publishOpen = false"
+      @history-close="historyOpen = false"
+    />
   </main>
 </template>
 

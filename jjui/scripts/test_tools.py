@@ -42,6 +42,20 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return target
 
+    def patch_page(self, target: Path, page_rel: str, old: str, new: str) -> None:
+        """页面源 = 入口 + features/ 合并源（判据正源: references/page-splitting.md）。
+
+        在入口与其 features/ 目录内定位含 old 的文件做替换；定位不到即测试失效。
+        """
+        page_file = target / page_rel
+        candidates = [page_file, *sorted(page_file.parent.glob("features/*"))]
+        for path in candidates:
+            text = path.read_text(encoding="utf-8")
+            if old in text:
+                path.write_text(text.replace(old, new), encoding="utf-8")
+                return
+        raise AssertionError(f"patch source not found: {page_rel} :: {old[:60]!r}")
+
     def test_init_and_check_react(self):
         target = self.init_stack("react-antd")
         result = self.run_check(target)
@@ -82,8 +96,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_missing_structural_text_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("新建客户", "新增客户"), encoding="utf-8")
+        self.patch_page(target, "src/pages/p-02-customer-list/features/customer-table.tsx", "新建客户", "新增客户")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("页面缺计划内结构文案", result.stderr)
@@ -247,11 +260,12 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_unregistered_interactive_control_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
             '<div data-jjui-data="p-02.customer-rows">',
-            '<div data-jjui-data="p-02.customer-rows"><Input.Search placeholder="跳转编辑" enterButton="前往" />'
-        ), encoding="utf-8")
+            '<div data-jjui-data="p-02.customer-rows"><Input.Search placeholder="跳转编辑" enterButton="前往" />',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("页面存在未登记操作的可交互控件", result.stderr)
@@ -276,8 +290,9 @@ class JjuiToolsTest(unittest.TestCase):
             if pg["id"] == "p-02":
                 pg["mock_rows"] = 30
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("<Pagination", "<HiddenPagination"), encoding="utf-8")
+        self.patch_page(
+            target, "src/pages/p-02-customer-list/features/customer-table.tsx", "<Pagination", "<HiddenPagination"
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("业务数据表格缺分页", result.stderr)
@@ -291,8 +306,9 @@ class JjuiToolsTest(unittest.TestCase):
             if pg["id"] == "p-02":
                 pg["mock_rows"] = 8
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("<Pagination", "<HiddenPagination"), encoding="utf-8")
+        self.patch_page(
+            target, "src/pages/p-02-customer-list/features/customer-table.tsx", "<Pagination", "<HiddenPagination"
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("业务数据表格缺分页（页面有新增入口", result.stderr)
@@ -301,10 +317,8 @@ class JjuiToolsTest(unittest.TestCase):
     def test_uniform_action_column_is_rejected(self):
         # 操作列跨页同质性对账：全站动作文案统一为占位词即拦
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        text = page.read_text(encoding="utf-8")
-        text = text.replace(">编辑</Button>", ">打开详情</Button>").replace(">详情</Button>", ">打开详情</Button>")
-        page.write_text(text, encoding="utf-8")
+        self.patch_page(target, "src/pages/p-02-customer-list/features/customer-table.tsx", ">编辑</Button>", ">打开详情</Button>")
+        self.patch_page(target, "src/pages/p-02-customer-list/features/customer-table.tsx", ">详情</Button>", ">打开详情</Button>")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("操作列文案全站同质", result.stderr)
@@ -312,8 +326,7 @@ class JjuiToolsTest(unittest.TestCase):
     def test_return_control_inside_tabs_is_rejected(self):
         # 嵌入式详情返回控件落位：返回文案出现在 Tabs 起始窗口内即拦
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-04-entity-workbench/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("<Tabs", '<Tabs data-probe="返回列表"'), encoding="utf-8")
+        self.patch_page(target, "src/pages/p-04-entity-workbench/features/entity-editor.tsx", "<Tabs", '<Tabs data-probe="返回列表"')
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("返回控件禁止混入 Tabs 区", result.stderr)
@@ -321,12 +334,13 @@ class JjuiToolsTest(unittest.TestCase):
     def test_table_header_descriptive_title_is_rejected(self):
         # 卡头禁描述性标题：卡头内非按钮文本以「列表/清单」结尾即拦（判据正源: composition-layer.md 工具栏段）
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
             '<div className="jjui-table-header">',
             '<div className="jjui-table-header"><span className="jjui-x">对象类型列表</span>'
-            '<Button type="primary">同步清单</Button>'
-        ), encoding="utf-8")
+            '<Button type="primary">同步清单</Button>',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("表格卡头禁描述性标题", result.stderr)
@@ -337,12 +351,13 @@ class JjuiToolsTest(unittest.TestCase):
     def test_table_header_descriptive_title_vue_is_rejected(self):
         # vue 栈同判据：el-button 剥离后查非按钮文本
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
             '<div class="jjui-table-header">',
             '<div class="jjui-table-header"><span class="jjui-x">对象类型清单</span>'
-            '<el-button type="primary">同步列表</el-button>'
-        ), encoding="utf-8")
+            '<el-button type="primary">同步列表</el-button>',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("表格卡头禁描述性标题", result.stderr)
@@ -377,20 +392,24 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_duplicate_action_anchor_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            'data-jjui-action="p-02.table-refresh"', 'data-jjui-action="p-02.create"', 1
-        ).replace('data-jjui-action="p-02.table-refresh"', 'data-jjui-action="p-02.create"'), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            'data-jjui-action="p-02.table-refresh"',
+            'data-jjui-action="p-02.create"',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("操作锚点重复", result.stderr)
 
     def test_single_table_card_title_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            '<SectionCard>\n          <div className="jjui-table-header">', '<SectionCard title="客户清单">\n          <div className="jjui-table-header">'
-        ), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<SectionCard>\n          <div className="jjui-table-header">',
+            '<SectionCard title="客户清单">\n          <div className="jjui-table-header">',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("列表页卡片不起标题", result.stderr)
@@ -424,10 +443,12 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_nested_card_in_page_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            '<div data-jjui-data="p-02.customer-rows">', '<div data-jjui-data="p-02.customer-rows"><Card>x</Card>'
-        ), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div data-jjui-data="p-02.customer-rows">',
+            '<div data-jjui-data="p-02.customer-rows"><Card>x</Card>',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("页面内嵌套组件库卡片", result.stderr)
@@ -472,8 +493,9 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_list_table_header_without_left_wing_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
             '''              <Input
                 data-jjui-action="p-02.quick-search"
                 prefix={<SearchOutlined />}
@@ -487,8 +509,8 @@ class JjuiToolsTest(unittest.TestCase):
                 allowClear
               />
 ''',
-            ""
-        ), encoding="utf-8")
+            "",
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("列表页表格卡头缺左翼快捷搜索", result.stderr)
@@ -506,22 +528,24 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_form_item_without_label_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
             '<div data-jjui-data="p-02.customer-rows">',
-            '<div data-jjui-data="p-02.customer-rows"><Form.Item><Input placeholder="类型标识" /></Form.Item>'
-        ), encoding="utf-8")
+            '<div data-jjui-data="p-02.customer-rows"><Form.Item><Input placeholder="类型标识" /></Form.Item>',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("表单项缺 label", result.stderr)
 
     def test_vue_form_item_without_label_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
-        page.write_text(page.read_text(encoding="utf-8").replace(
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
             '<div v-loading="loading" data-jjui-data="p-02.customer-rows">',
-            '<div v-loading="loading" data-jjui-data="p-02.customer-rows"><el-form-item><el-input placeholder="类型标识" /></el-form-item>'
-        ), encoding="utf-8")
+            '<div v-loading="loading" data-jjui-data="p-02.customer-rows"><el-form-item><el-input placeholder="类型标识" /></el-form-item>',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("表单项缺 label", result.stderr)
@@ -556,10 +580,12 @@ class JjuiToolsTest(unittest.TestCase):
             if pg["id"] == "p-02":
                 pg["composition"]["recipe"] = "settings"
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            '<div className="jjui-table-header">', '<div className="jjui-table-head">'
-        ), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-table-header">',
+            '<div className="jjui-table-head">',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("业务表格须用表格卡头两翼结构", result.stderr)
@@ -603,10 +629,12 @@ class JjuiToolsTest(unittest.TestCase):
             if pg["id"] == "p-02":
                 pg["composition"]["recipe"] = "workspace"
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            '<div className="jjui-table-header">', '<div className="jjui-table-head">'
-        ), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-table-header">',
+            '<div className="jjui-table-head">',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("表级配置操作（刷新/列设置）漂在表格卡外", result.stderr)
@@ -625,10 +653,12 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_list_without_table_header_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            '<div className="jjui-table-header">', '<div className="jjui-table-head">'
-        ), encoding="utf-8")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-table-header">',
+            '<div className="jjui-table-head">',
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("列表页缺表格卡头两翼结构", result.stderr)
@@ -661,8 +691,7 @@ class JjuiToolsTest(unittest.TestCase):
             if pg["id"] == "p-02":
                 pg["mock_rows"] = 30
         plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("itemRender", "renderItem"), encoding="utf-8")
+        self.patch_page(target, "src/pages/p-02-customer-list/features/customer-table.tsx", "itemRender", "renderItem")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("antd 分页须用 itemRender", result.stderr)
@@ -721,8 +750,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_ide_without_tabs_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-04-entity-workbench/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace("<Tabs", "<Panels"), encoding="utf-8")
+        self.patch_page(target, "src/pages/p-04-entity-workbench/features/entity-editor.tsx", "<Tabs", "<Panels")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("ide 页编辑器须用 Tabs", result.stderr)
@@ -740,10 +768,9 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_ide_without_tree_anchor_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-04-entity-workbench/index.tsx"
-        page.write_text(page.read_text(encoding="utf-8").replace(
-            "data-jjui-node={String(node.key)}", "data-node={String(node.key)}"
-        ), encoding="utf-8")
+        self.patch_page(
+            target, "src/pages/p-04-entity-workbench/features/outline-tree.tsx", "data-jjui-node={String(node.key)}", "data-node={String(node.key)}"
+        )
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("ide 页大纲树项锚点缺失", result.stderr)
@@ -781,10 +808,17 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_section_card_overflow_with_tabs_passes(self):
         target = self.init_stack("react-antd")
+        # 入口禁内联 Tabs（封闭交互单元落 features/），Tabs 放进 Feature 即可豁免并列区块超限
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<section data-jjui-region="p-02.filter">',
+            '<Tabs items={[]} />\n      <section data-jjui-region="p-02.filter">',
+        )
         page = target / "src/pages/p-02-customer-list/index.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<main data-jjui-page="p-02">',
-            '<main data-jjui-page="p-02"><Tabs items={[]} /><SectionCard>x</SectionCard><SectionCard>y</SectionCard>'
+            '<main data-jjui-page="p-02"><SectionCard>x</SectionCard><SectionCard>y</SectionCard>'
         ), encoding="utf-8")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -825,7 +859,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_status_tag_ternary_label_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             ':label="statusLabel(row.status)"', ":label=\"row.status === 'active' ? '启用' : '停用'\""
         ), encoding="utf-8")
@@ -876,7 +910,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_filter_form_without_inline_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Form layout="inline">', "<Form>"
         ), encoding="utf-8")
@@ -886,7 +920,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_form_vertical_layout_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Form layout="inline">', '<Form layout="vertical">'
         ), encoding="utf-8")
@@ -896,7 +930,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_filter_form_without_inline_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             ':inline="true"', ""
         ), encoding="utf-8")
@@ -916,7 +950,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_filter_width_hardcoded_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             'style={{ width: "var(--control-width)" }}', 'style={{ width: 130 }}'
         ), encoding="utf-8")
@@ -926,7 +960,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_modal_form_labelcol_flex_none_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-form-modal.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Form form={form} labelAlign="left" labelCol={{ span: 6 }}',
             '<Form form={form} labelAlign="left" labelCol={{ flex: "none" }}'
@@ -937,7 +971,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_el_form_without_label_width_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-form-modal.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<el-form ref="formRef" :model="formState" :rules="formRules" label-position="left" label-width="var(--form-label-width)">',
             '<el-form ref="formRef" :model="formState" :rules="formRules" label-position="left">'
@@ -969,7 +1003,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_deprecated_control_width_token_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             'var(--control-width)', 'var(--control-width-select)'
         ), encoding="utf-8")
@@ -979,7 +1013,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_modal_control_fixed_width_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-form-modal.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             'data-jjui-action="p-02.form-status" style={{ width: "100%" }}',
             'data-jjui-action="p-02.form-status" style={{ width: 130 }}'
@@ -990,7 +1024,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_dialog_control_fixed_width_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-form-modal.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             'style="width: 100%" data-jjui-action="p-02.form-status"',
             'style="width: 130px" data-jjui-action="p-02.form-status"'
@@ -1023,7 +1057,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_op_column_solid_button_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Button type="link" size="small" data-jjui-action="p-02.row-edit"',
             '<Button type="primary" size="small" data-jjui-action="p-02.row-edit"'
@@ -1034,7 +1068,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_op_column_solid_button_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<el-button link type="primary" size="small" data-jjui-action="p-02.row-edit"',
             '<el-button type="primary" size="small" data-jjui-action="p-02.row-edit"'
@@ -1045,7 +1079,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_op_column_disabled_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Button type="link" size="small" data-jjui-action="p-02.row-detail"',
             '<Button type="link" size="small" disabled data-jjui-action="p-02.row-detail"'
@@ -1056,7 +1090,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_op_column_disabled_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-table.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<el-button link type="primary" size="small" data-jjui-action="p-02.row-detail"',
             '<el-button link type="primary" size="small" disabled data-jjui-action="p-02.row-detail"'
@@ -1067,7 +1101,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_descriptions_with_controls_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page = target / "src/pages/p-02-customer-list/features/customer-detail-drawer.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<Descriptions',
             '<Descriptions items={[{ key: "n", label: "名称", children: <Input /> }]}'
@@ -1078,7 +1112,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_descriptions_with_controls_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-02-customer-list/index.vue"
+        page = target / "src/pages/p-02-customer-list/features/customer-detail-drawer.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             "<el-descriptions",
             '<el-descriptions><el-descriptions-item label="名称"><el-input v-model="draftKeyword" /></el-descriptions-item>'
@@ -1089,10 +1123,10 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_ide_page_vertical_form_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-04-entity-workbench/index.tsx"
+        page = target / "src/pages/p-04-entity-workbench/features/entity-editor.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
-            '<Form\n                      key={selectedKey}',
-            '<Form layout="vertical"\n                      key={selectedKey}'
+            '<Form\n                key={selectedKey}',
+            '<Form layout="vertical"\n                key={selectedKey}'
         ), encoding="utf-8")
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
@@ -1100,7 +1134,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_tree_inner_maxheight_is_rejected(self):
         target = self.init_stack("react-antd")
-        page = target / "src/pages/p-04-entity-workbench/index.tsx"
+        page = target / "src/pages/p-04-entity-workbench/features/outline-tree.tsx"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<aside className="jjui-ide__tree" data-jjui-region="p-04.tree">',
             '<aside className="jjui-ide__tree" data-jjui-region="p-04.tree"><div style={{ maxHeight: 520, overflowY: "auto" }}>'
@@ -1111,7 +1145,7 @@ class JjuiToolsTest(unittest.TestCase):
 
     def test_vue_tree_inner_maxheight_is_rejected(self):
         target = self.init_stack("vue3-element-plus")
-        page = target / "src/pages/p-04-entity-workbench/index.vue"
+        page = target / "src/pages/p-04-entity-workbench/features/outline-tree.vue"
         page.write_text(page.read_text(encoding="utf-8").replace(
             '<aside class="jjui-ide__tree" data-jjui-region="p-04.tree">',
             '<aside class="jjui-ide__tree" data-jjui-region="p-04.tree"><div style="max-height: 520px; overflow-y: auto;">'
@@ -1141,6 +1175,81 @@ class JjuiToolsTest(unittest.TestCase):
         result = self.run_check(target)
         self.assertEqual(result.returncode, 1)
         self.assertIn("缺底部预留 padding-bottom", result.stderr)
+
+    # ── 页面内分层机判（判据正源: references/page-splitting.md）──
+
+    def test_entry_inline_unit_is_rejected(self):
+        # 机判①：入口文件禁内联 Drawer/Modal/Tabs 实现体，封闭交互单元落 features/
+        target = self.init_stack("react-antd")
+        page = target / "src/pages/p-02-customer-list/index.tsx"
+        page.write_text(page.read_text(encoding="utf-8").replace(
+            "<CustomerTable",
+            '<Modal title="临时弹框" open={false}></Modal><CustomerTable'
+        ), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("页面入口文件禁内联 Drawer/Modal/Tabs 实现体", result.stderr)
+
+    def test_vue_entry_inline_unit_is_rejected(self):
+        target = self.init_stack("vue3-element-plus")
+        page = target / "src/pages/p-02-customer-list/index.vue"
+        page.write_text(page.read_text(encoding="utf-8").replace(
+            "<CustomerTable",
+            '<el-dialog title="临时弹框"></el-dialog><CustomerTable'
+        ), encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("页面入口文件禁内联 Drawer/Modal/Tabs 实现体", result.stderr)
+
+    def test_mock_import_is_rejected(self):
+        # 机判②：禁止 import src/mock/*——数据契约收敛为 src/services 服务层
+        target = self.init_stack("react-antd")
+        page = target / "src/pages/p-01-dashboard/index.tsx"
+        page.write_text(
+            'import { legacyRows } from "../../mock/legacy";\n'
+            + page.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (target / "src/mock").mkdir(exist_ok=True)
+        (target / "src/mock/legacy.ts").write_text(
+            "export const legacyRows: unknown[] = [];\n", encoding="utf-8"
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("禁止 import src/mock/*", result.stderr)
+
+    def test_vue_mock_import_is_rejected(self):
+        target = self.init_stack("vue3-element-plus")
+        page = target / "src/pages/p-01-dashboard/index.vue"
+        page.write_text(
+            '<script setup lang="ts">\nimport { legacyRows } from "../../mock/legacy";\n</script>\n'
+            + page.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (target / "src/mock").mkdir(exist_ok=True)
+        (target / "src/mock/legacy.ts").write_text(
+            "export const legacyRows: unknown[] = [];\n", encoding="utf-8"
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("禁止 import src/mock/*", result.stderr)
+
+    def test_features_registered_file_missing_is_rejected(self):
+        # 机判③：page-plan features 登记与 features/ 目录双向对账——登记文件缺失报错
+        target = self.init_stack("react-antd")
+        (target / "src/pages/p-02-customer-list/features/customer-table.tsx").unlink()
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("features 登记文件缺失", result.stderr)
+
+    def test_features_unregistered_file_is_rejected(self):
+        # 双向对账反向：features/ 目录存在未登记文件也报错
+        target = self.init_stack("vue3-element-plus")
+        extra = target / "src/pages/p-02-customer-list/features/extra-panel.vue"
+        extra.write_text("<template><span>未登记浮层</span></template>\n", encoding="utf-8")
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("features/ 目录存在未登记文件", result.stderr)
 
 
 if __name__ == "__main__":

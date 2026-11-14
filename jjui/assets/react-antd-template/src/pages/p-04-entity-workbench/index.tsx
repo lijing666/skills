@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
-import { Affix, Button, Descriptions, Drawer, Form, Input, Modal, Space, Tabs, Tree, message } from "antd";
+import { Affix, Button, Space, message } from "antd";
 import { PageHeader, StatusTag } from "../../components/admin";
+import OutlineTree from "./features/outline-tree";
+import EntityEditor from "./features/entity-editor";
+import InsightPanel from "./features/insight-panel";
+import StatusDialogs from "./features/status-dialogs";
 
 // 编辑器工作台页（判据正源: composition-layer.md 编辑器型页面段；语法: react-antd.md）
-// 三栏一体：大纲树 + Tabs 编辑器 + 伴随面板，底部常驻状态栏；树项选中驱动编辑器与伴随面板
+// 入口只做装配（判据正源: references/page-splitting.md）：三栏 Feature（大纲树/Tabs 编辑器/伴随面板）
+// + 底部状态栏；共享状态（选中项、大纲、发布态）由入口编排下发
+// 三区一体：大纲树 + Tabs 编辑器 + 伴随面板，底部常驻状态栏；树项选中驱动编辑器与伴随面板
 
 type OutlineItem = {
   key: string;
@@ -31,47 +37,22 @@ const ISSUES = [
   { target: "rule-score", text: "「积分计算」未绑定触发时机" }
 ];
 
-const VERSIONS = [
-  { version: "v2.0", note: "当前草稿基线" },
-  { version: "v1.9", note: "新增下单校验规则" },
-  { version: "v1.8", note: "调整客户字段说明" }
-];
-
 export default function EntityWorkbench() {
   const [outline, setOutline] = useState(OUTLINE);
   const [selectedKey, setSelectedKey] = useState("customer");
   const selected = outline.find((item) => item.key === selectedKey);
   const selectedBindings = BINDINGS.filter((b) => b.source === selectedKey);
-  const treeData = [
-    {
-      title: "对象",
-      key: "group-object",
-      children: outline.filter((item) => item.group === "对象").map(({ key, title }) => ({ key, title }))
-    },
-    {
-      title: "规则",
-      key: "group-rule",
-      children: outline.filter((item) => item.group === "规则").map(({ key, title }) => ({ key, title }))
-    }
-  ];
   // 发布/校验/历史：真实交互流（判据: composition-layer.md 页面段操作保真 + 编辑器型页面段底部状态栏）
   const [published, setPublished] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // 编辑器表单：key 随选中重建 + initialValues，保存写回 mock（判据: composition-layer.md 表单段）
-  const [form] = Form.useForm();
 
-  const selectNode = (key: string) => {
-    setSelectedKey(key);
-  };
   const runCheck = () => {
     message.info(`校验完成：${ISSUES.length} 项待处理`);
   };
-  const submitEdit = () => {
-    form.validateFields().then((values) => {
-      setOutline(outline.map((item) => (item.key === selectedKey ? { ...item, ...values } : item)));
-      message.success(`已保存「${values.title}」（mock 数据）`);
-    });
+  const submitEdit = (values: { title: string; description: string }) => {
+    setOutline(outline.map((item) => (item.key === selectedKey ? { ...item, ...values } : item)));
+    message.success(`已保存「${values.title}」（mock 数据）`);
   };
   // StatusTag label 须为字面量状态词或纯变量（判据: composition-layer.md 状态段）
   const statusLabel = published ? "已发布" : "草稿";
@@ -80,11 +61,6 @@ export default function EntityWorkbench() {
   useEffect(() => {
     setScrollEl(document.querySelector(".admin-layout__content"));
   }, []);
-  const publish = () => {
-    setPublished(true);
-    setPublishOpen(false);
-    message.success("工作台草稿已发布（mock 数据）");
-  };
 
   return (
     <main data-jjui-page="p-04">
@@ -95,80 +71,14 @@ export default function EntityWorkbench() {
 
       <div className="jjui-ide" data-jjui-ide="p-04.workbench">
         <div className="jjui-ide__body">
-          <aside className="jjui-ide__tree" data-jjui-region="p-04.tree">
-            <Tree
-              treeData={treeData}
-              blockNode
-              defaultExpandAll
-              selectedKeys={[selectedKey]}
-              titleRender={(node: { key: unknown; title?: string; children?: unknown[] }) =>
-                node.children ? (
-                  <span>{node.title}</span>
-                ) : (
-                  <span
-                    data-jjui-node={String(node.key)}
-                    className={`jjui-ide__tree-item${node.key === selectedKey ? " jjui-ide__tree-item--selected" : ""}`}
-                    onClick={() => selectNode(String(node.key))}
-                  >
-                    {node.title}
-                  </span>
-                )
-              }
-            />
-          </aside>
-
-          <section className="jjui-ide__editor" data-jjui-region="p-04.editor">
-            <Tabs
-              items={[
-                {
-                  key: "base",
-                  label: "基本信息",
-                  children: (
-                    <Form
-                      key={selectedKey}
-                      form={form}
-                      labelAlign="left"
-                      labelCol={{ span: 6 }}
-                      initialValues={{ title: selected?.title, description: selected?.description }}
-                    >
-                      <Form.Item label="名称" name="title" rules={[{ required: true, message: "请输入名称" }]}>
-                        <Input data-jjui-action="p-04.form-title" />
-                      </Form.Item>
-                      <Form.Item label="说明" name="description" rules={[{ required: true, message: "请输入说明" }]}>
-                        <Input.TextArea data-jjui-action="p-04.form-description" rows={3} />
-                      </Form.Item>
-                      <Button type="primary" data-jjui-action="p-04.save" onClick={submitEdit}>保存</Button>
-                    </Form>
-                  )
-                },
-                {
-                  key: "binding",
-                  label: "关联设置",
-                  children: selectedBindings.length ? (
-                    <Descriptions
-                      column={1}
-                      size="small"
-                      bordered
-                      items={selectedBindings.map((b) => ({ key: b.target, label: b.target, children: b.note }))}
-                    />
-                  ) : (
-                    <p className="jjui-section__description">未配置关联。</p>
-                  )
-                }
-              ]}
-            />
-          </section>
-
-          <aside className="jjui-editor-panel" data-jjui-region="p-04.panel">
-            <div className="jjui-section__title">{selected?.title}</div>
-            <p className="jjui-section__description">{selected?.description}</p>
-            <div className="jjui-section__subtitle">校验</div>
-            {ISSUES.map((issue) => (
-              <p key={issue.text} className="jjui-section__description">{issue.text}</p>
-            ))}
-            <div className="jjui-section__subtitle">提示</div>
-            <p className="jjui-section__description">修改后需通过校验才可发布。</p>
-          </aside>
+          <OutlineTree items={outline} selectedKey={selectedKey} onSelect={setSelectedKey} />
+          <EntityEditor
+            selectedKey={selectedKey}
+            selected={selected}
+            bindings={selectedBindings}
+            onSave={submitEdit}
+          />
+          <InsightPanel selected={selected} issues={ISSUES} />
         </div>
 
         <Affix offsetBottom={0} target={() => scrollEl ?? undefined}>
@@ -186,27 +96,17 @@ export default function EntityWorkbench() {
         </Affix>
       </div>
 
-      <Modal
-        title="发布工作台"
-        open={publishOpen}
-        okText="发布"
-        cancelText="取消"
-        onOk={publish}
-        onCancel={() => setPublishOpen(false)}
-      >
-        <p>发布后当前草稿将固化为基线 v2.1，已发布版本不可直接修改。</p>
-      </Modal>
-
-      <Drawer title="版本历史" open={historyOpen} onClose={() => setHistoryOpen(false)}>
-        <Space orientation="vertical" style={{ width: "100%" }} size={8}>
-          {VERSIONS.map((item) => (
-            <div key={item.version} style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{item.version}</span>
-              <span className="jjui-pagination__meta">{item.note}</span>
-            </div>
-          ))}
-        </Space>
-      </Drawer>
+      <StatusDialogs
+        publishOpen={publishOpen}
+        historyOpen={historyOpen}
+        onPublish={() => {
+          setPublished(true);
+          setPublishOpen(false);
+          message.success("工作台草稿已发布（mock 数据）");
+        }}
+        onPublishCancel={() => setPublishOpen(false)}
+        onHistoryClose={() => setHistoryOpen(false)}
+      />
     </main>
   );
 }

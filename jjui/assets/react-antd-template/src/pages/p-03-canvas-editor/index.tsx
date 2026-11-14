@@ -14,10 +14,14 @@ import {
   type NodeProps
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Affix, Button, Descriptions, Drawer, Form, Input, Modal, Space, message } from "antd";
+import { Affix, Button, Descriptions, Space, message } from "antd";
 import { PageHeader, StatusTag } from "../../components/admin";
+import EntityEditModal from "./features/entity-edit-modal";
+import StatusDialogs from "./features/status-dialogs";
 
 // 画布页（判据正源: composition-layer.md 画布段；语法: react-antd.md 画布段）
+// 入口只做装配（判据正源: references/page-splitting.md）：画布 + 伴随面板 + 状态栏；
+// 弹框表单与状态栏附属浮层是封闭交互单元，落 features/
 // 三区一体：画布主编辑面 + 伴随面板 + 底部状态栏；节点/边可选中驱动伴随面板
 
 type EntityData = {
@@ -51,12 +55,6 @@ const RELATIONS = [
 const ISSUES = [
   { target: "商品", text: "「商品」缺少主键属性" },
   { target: "订单", text: "「订单」到「商品」的关系未标注基数" }
-];
-
-const VERSIONS = [
-  { version: "v1.4", note: "当前草稿基线" },
-  { version: "v1.3", note: "新增商品实体" },
-  { version: "v1.2", note: "调整下单关系基数" }
 ];
 
 function EntityNode({ id, data, selected }: NodeProps<EntityNodeModel>) {
@@ -127,28 +125,26 @@ export default function CanvasEditor() {
   const [published, setPublished] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // 伴随面板编辑：弹框表单 + 校验 + 写回 mock（判据: composition-layer.md 表单段）
-  const [form] = Form.useForm();
+  // 伴随面板编辑：弹框表单为封闭交互单元落 features/（判据正源: references/page-splitting.md），初始值经 props 下发
   const [editOpen, setEditOpen] = useState(false);
+  const [editInitial, setEditInitial] = useState<{ label: string; description: string } | null>(null);
 
   const runCheck = () => {
     message.info(`校验完成：${ISSUES.length} 项待处理`);
   };
   const openEdit = () => {
     if (!selectedEntity) return;
-    form.setFieldsValue({ label: selectedEntity.label, description: selectedEntity.description });
+    setEditInitial({ label: selectedEntity.label, description: selectedEntity.description });
     setEditOpen(true);
   };
-  const submitEdit = () => {
-    form.validateFields().then((values) => {
-      setNodes((prev) =>
-        prev.map((node) =>
-          node.id === selectedId ? { ...node, data: { ...node.data, label: values.label, description: values.description } } : node
-        )
-      );
-      message.success(`已保存实体「${values.label}」（mock 数据）`);
-      setEditOpen(false);
-    });
+  const submitEdit = (values: { label: string; description: string }) => {
+    setNodes((prev) =>
+      prev.map((node) =>
+        node.id === selectedId ? { ...node, data: { ...node.data, label: values.label, description: values.description } } : node
+      )
+    );
+    message.success(`已保存实体「${values.label}」（mock 数据）`);
+    setEditOpen(false);
   };
   // StatusTag label 须为字面量状态词或纯变量（判据: composition-layer.md 状态段）
   const statusLabel = published ? "已发布" : "草稿";
@@ -157,11 +153,6 @@ export default function CanvasEditor() {
   useEffect(() => {
     setScrollEl(document.querySelector(".admin-layout__content"));
   }, []);
-  const publish = () => {
-    setPublished(true);
-    setPublishOpen(false);
-    message.success("画布草稿已发布（mock 数据）");
-  };
 
   return (
     <main data-jjui-page="p-03">
@@ -229,45 +220,23 @@ export default function CanvasEditor() {
         </Affix>
       </div>
 
-      <Modal
-        title="编辑实体属性"
+      <EntityEditModal
         open={editOpen}
-        okText="保存"
-        cancelText="取消"
-        onOk={submitEdit}
+        initial={editInitial}
+        onSubmit={submitEdit}
         onCancel={() => setEditOpen(false)}
-      >
-        <Form form={form} labelAlign="left" labelCol={{ span: 6 }}>
-          <Form.Item label="名称" name="label" rules={[{ required: true, message: "请输入实体名称" }]}>
-            <Input data-jjui-action="p-03.form-label" placeholder="请输入实体名称" />
-          </Form.Item>
-          <Form.Item label="说明" name="description" rules={[{ required: true, message: "请输入实体说明" }]}>
-            <Input data-jjui-action="p-03.form-description" placeholder="请输入实体说明" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="发布画布"
-        open={publishOpen}
-        okText="发布"
-        cancelText="取消"
-        onOk={publish}
-        onCancel={() => setPublishOpen(false)}
-      >
-        <p>发布后当前草稿将固化为基线 v1.5，已发布版本不可直接修改。</p>
-      </Modal>
-
-      <Drawer title="版本历史" open={historyOpen} onClose={() => setHistoryOpen(false)}>
-        <Space orientation="vertical" style={{ width: "100%" }} size={8}>
-          {VERSIONS.map((item) => (
-            <div key={item.version} style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{item.version}</span>
-              <span className="jjui-pagination__meta">{item.note}</span>
-            </div>
-          ))}
-        </Space>
-      </Drawer>
+      />
+      <StatusDialogs
+        publishOpen={publishOpen}
+        historyOpen={historyOpen}
+        onPublish={() => {
+          setPublished(true);
+          setPublishOpen(false);
+          message.success("画布草稿已发布（mock 数据）");
+        }}
+        onPublishCancel={() => setPublishOpen(false)}
+        onHistoryClose={() => setHistoryOpen(false)}
+      />
     </main>
   );
 }

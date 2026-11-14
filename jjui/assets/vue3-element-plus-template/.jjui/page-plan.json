@@ -66,6 +66,11 @@
       "title": "客户列表",
       "route": "/customers",
       "file": "src/pages/p-02-customer-list/index.vue",
+      "features": [
+        { "id": "table", "file": "src/pages/p-02-customer-list/features/customer-table.vue" },
+        { "id": "form-modal", "file": "src/pages/p-02-customer-list/features/customer-form-modal.vue" },
+        { "id": "detail-drawer", "file": "src/pages/p-02-customer-list/features/customer-detail-drawer.vue" }
+      ],
       "expected_entry": [
         "menu"
       ],
@@ -221,6 +226,10 @@
       "title": "实体画布",
       "route": "/canvas",
       "file": "src/pages/p-03-canvas-editor/index.vue",
+      "features": [
+        { "id": "edit-modal", "file": "src/pages/p-03-canvas-editor/features/entity-edit-modal.vue" },
+        { "id": "status-dialogs", "file": "src/pages/p-03-canvas-editor/features/status-dialogs.vue" }
+      ],
       "expected_entry": [
         "menu"
       ],
@@ -353,6 +362,12 @@
       "title": "实体工作台",
       "route": "/workbench",
       "file": "src/pages/p-04-entity-workbench/index.vue",
+      "features": [
+        { "id": "outline-tree", "file": "src/pages/p-04-entity-workbench/features/outline-tree.vue" },
+        { "id": "entity-editor", "file": "src/pages/p-04-entity-workbench/features/entity-editor.vue" },
+        { "id": "insight-panel", "file": "src/pages/p-04-entity-workbench/features/insight-panel.vue" },
+        { "id": "status-dialogs", "file": "src/pages/p-04-entity-workbench/features/status-dialogs.vue" }
+      ],
       "expected_entry": [
         "menu"
       ],

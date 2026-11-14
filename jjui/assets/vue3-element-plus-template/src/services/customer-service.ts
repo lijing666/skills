@@ -1,3 +1,6 @@
+// 服务层单源（判据正源: references/page-splitting.md Service 契约）
+// 接口定义 + mock 实现同文件：async 签名 + 固定延时，跨页单源，禁止真实网络请求。
+// mock 的是服务接口——后续原型转正式页面只需替换本文件实现为真实 API，页面与 Feature 零改动。
 export type Customer = {
   id: string;
   name: string;
@@ -6,7 +9,9 @@ export type Customer = {
   owner: string;
 };
 
-export const customers: Customer[] = [
+export type CustomerInput = Omit<Customer, "id">;
+
+const seed: Customer[] = [
   { id: "C-001", name: "客户一", status: "active", region: "华南", owner: "李四" },
   { id: "C-002", name: "客户二", status: "active", region: "华北", owner: "王五" },
   { id: "C-003", name: "客户三", status: "inactive", region: "西南", owner: "赵六" },
@@ -35,8 +40,23 @@ export const customers: Customer[] = [
   { id: "C-026", name: "客户二十六", status: "active", region: "华北", owner: "王五" }
 ];
 
-export const customerMetrics = [
-  { id: "m-001", label: "客户总数", value: customers.length },
-  { id: "m-002", label: "启用客户", value: customers.filter((item) => item.status === "active").length },
-  { id: "m-003", label: "停用客户", value: customers.filter((item) => item.status === "inactive").length }
-];
+const delay = (ms = 200) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export async function listCustomers(): Promise<Customer[]> {
+  await delay();
+  return [...seed];
+}
+
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  await delay();
+  const next: Customer = { id: `C-${String(seed.length + 1).padStart(3, "0")}`, ...input };
+  seed.unshift(next);
+  return next;
+}
+
+export async function updateCustomer(id: string, input: CustomerInput): Promise<Customer> {
+  await delay();
+  const index = seed.findIndex((item) => item.id === id);
+  if (index >= 0) seed[index] = { ...seed[index], ...input };
+  return seed[index];
+}
