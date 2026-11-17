@@ -2,7 +2,7 @@
 name: jjui
 description: "管理后台前端原型生成 skill：基于 React+Ant Design 或 Vue3+Element Plus 生成可运行、可冻结、可直接接入 jjspec HTML 原型路线的后台原型工程。适用于客户/订单/运营/配置类后台、列表-详情-表单-设置页面，以及需要用真实组件库替代手绘页面、并把原型交付给 jjspec 做后续 UI 规范与实现验收的场景；不适用于营销页、小程序、移动端、图片像素级还原、真实后端或生产级架构。"
 metadata:
-  version: 0.2.35
+  version: 0.2.41
   created: "2026-11-08"
 ---
 
@@ -34,12 +34,12 @@ metadata:
 
 1. **范围判定**：确认是管理后台前端原型；非后台需求拒绝本技能。
 2. **技术栈确认**：显式选择 `react-antd` 或 `vue3-element-plus`；未选择时停靠询问。
-3. **页面计划封闭**：读取 `references/page-archetypes.md`，列出页面、路由、菜单、字段、操作、状态、Mock 数据和假设；含表格的页面按「有无新增类入口」归类业务记录/免分页白名单（判据见 `composition-layer.md` 表格段），归类歧义处批量停靠交用户确认。
+3. **页面计划封闭**：读取 `references/page-archetypes.md`，列出页面、路由、菜单、字段、操作、状态、Mock 数据和假设；含表格的页面按「有无新增类入口」归类业务记录/免分页白名单（判据见 `composition-layer.md` 表格段），归类歧义处批量停靠交用户确认。操作文案按命名判据（`page-archetypes.md` 操作与状态段）在登记时定稿——登记即定稿，实现不得改名。
 4. **初始化工程**：运行 `scripts/init_prototype.py` 从对应模板复制工程；先读 `references/prototype-contract.md`。
 5. **实现页面**：先读 `references/page-splitting.md` 做页面内四层归属判定（Page / Feature / Service / Shared），Service 契约落 `src/services/`，封闭交互单元落 `features/`；再按栈读 `references/react-antd.md` 或 `references/vue3-element-plus.md`；按页面计划的 `composition.recipe` 用组合层组件排布，以组件库组件填充内容。
 6. **锚点与分层**：给页面、区域、操作、动态区加稳定 `data-jjui-*` 锚点；静态结构文案入页面计划，动态数据放显式 `data-jjui-data` 区。
 7. **机械校验**：运行 `scripts/check_prototype.py <原型目录>`；修复到 PASS。
-8. **实跑验证**：按 manifest 启动工程，逐页实跑，确认无控制台错误、页面不空白、声明交互可演示；每页只留 1 张 `<page_id>-baseline.png`（绝对路径 `.jjui/reports/screenshots/`），重拍时**同名覆盖**；即时查看的截图落 `/tmp` 看完即删，不进工程目录；场景证据按评审需要临时导出到工程外（走截图物证纪律）。每张落盘后立即核验存在且非 0 字节；交付前用 `scripts/evidence.py check` 逐页对账（命名 + 非 0 字节）。交互演示一律用 playwright 原生 click/fill 等真实输入事件，禁止 JS `el.click()` 注入点击——antd 等组件的事件可能不响应注入点击，会误判交互失效。**升级依赖后必须重启 dev server 再验证**（旧进程的 `.vite/deps` 预构建残留会静默供给旧版组件，让新 API"看起来未实装"；必要时删 `node_modules/.vite`）。
+8. **实跑验证**：按 manifest 启动工程，逐页实跑，确认无控制台错误、页面不空白、声明交互可演示；每页只留 1 张 `<page_id>-baseline.png`（绝对路径 `.jjui/reports/screenshots/`），重拍时**同名覆盖**；即时查看的截图落 `/tmp` 看完即删，不进工程目录；场景证据按评审需要临时导出到工程外（走截图物证纪律）。每张落盘后立即核验存在且非 0 字节；交付前用 `scripts/evidence.py check` 逐页对账（命名 + 非 0 字节）。交互演示一律用 playwright 原生 click/fill 等真实输入事件，禁止 JS `el.click()` 注入点击——antd 等组件的事件可能不响应注入点击，会误判交互失效。**升级依赖后必须重启 dev server 再验证**（旧进程的 `.vite/deps` 预构建残留会静默供给旧版组件，让新 API"看起来未实装"；必要时删 `node_modules/.vite`）。行为级必演示条目（逐条浏览器实跑确认，机械校验不覆盖，未演示 = 未验证）：①每个登记的表单提交操作必演示一次非法提交（空必填或非法格式），确认错误**就地展示**在字段下方而非弹 `message` 提示框拦截（判据正源：`composition-layer.md` 表单段校验条）；②新增行/新增项类操作演示后，确认新项处于**可编辑态**（字段控件可输入修改），不是只读展示行。工作流 B/C 的"实跑验证"即指含本条目清单的验证。
 9. **交付**：输出启动命令、页面清单、已实现交互、Mock 假设和未验证项，以及"规范坑回流清单"——执行过程中发现的与技能判据冲突的组件库事实（版本差异、API 不存在、静默失败）；不宣称业务需求或生产验收通过。
    - 回流纪律：每条回流必须给出可定位源（文件 + 行号 + 原文引用），引用不出原文的判断一律不提出；版本口径以模板 `package.json` 为准，引用他版资料先声明版本差异。
    - 新鲜度纪律：重载技能或跨会话续作时，先重读本次工作涉及的判据正源（`references/*.md`）再下结论，不得拿缓存 grep 结果或记忆当现状；判据是否漂移以 `manifest.jjui_version` 与 SKILL.md 声明的技能版本对账为准（不一致时 `check_prototype.py` 必报）。
@@ -48,7 +48,7 @@ metadata:
 
 触发：任何对既有原型工程（含 `.jjui/` 目录的工程）的改动请求，无论多小——改样式、改文案、加按钮都算；不得绕过本工作流直接改代码。
 
-1. 先改 `.jjui/page-plan.json`，登记新增/修改/删除页面、字段、操作、状态和 `composition` 契约。
+1. 先改 `.jjui/page-plan.json`，登记新增/修改/删除页面、字段、操作、状态和 `composition` 契约；操作文案按命名判据在登记时定稿（判据正源：`references/page-archetypes.md` 操作与状态段）。
 2. **修改前分析**：读入口文件与已登记 `features/`，判定改动归属——归属既有 Feature 只改该文件；新职责新建 Feature 并登记 `features`；禁止直接向入口文件追加油浮层、Tab pane、伴随面板实现体（判据正源: `references/page-splitting.md` 修改前分析段）。
 3. 只修改受影响页面及必要共享模块；不重写 `src/custom/`。
 4. 不切换技术栈、不重排页面 ID。

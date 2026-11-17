@@ -331,6 +331,178 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("返回控件禁止混入 Tabs 区", result.stderr)
 
+    def test_text_back_button_is_rejected(self):
+        # 返回控件只允许图标：可见文字含「返回」的文字按钮即拦（判据正源: composition-layer.md 页面段）
+        target = self.init_stack("react-antd")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("返回控件只允许图标", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div data-jjui-data="p-02.customer-rows">',
+            '<div data-jjui-data="p-02.customer-rows"><Button type="link" onClick={onDetail}>返回列表</Button>',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("返回控件只允许图标", result.stderr)
+        self.assertIn("返回列表", result.stderr)
+
+    def test_text_back_button_vue_is_rejected(self):
+        # vue 栈同判据：el-button 文字返回按钮即拦；基线 PageHeader 图标按钮（aria-label 在属性内）不误伤
+        target = self.init_stack("vue3-element-plus")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("返回控件只允许图标", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div v-loading="loading" data-jjui-data="p-02.customer-rows">',
+            '<div v-loading="loading" data-jjui-data="p-02.customer-rows"><el-button link @click="emit(\'detail\')">返回列表</el-button>',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("返回控件只允许图标", result.stderr)
+        self.assertIn("返回列表", result.stderr)
+
+    def test_wizard_bottom_progress_line_is_rejected(self):
+        # 向导弹框配方：底部「步骤 N/M」进度描述行删除，进度单源落在步骤条高亮（判据正源: composition-layer.md 表单段）
+        target = self.init_stack("react-antd")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("向导弹框禁底部进度描述行", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<div className="jjui-wizard-progress">步骤 1 / 3：绑定一个或多个数据源</div><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("向导弹框禁底部进度描述行", result.stderr)
+        self.assertIn("步骤 1 / 3", result.stderr)
+
+    def test_wizard_bottom_progress_line_vue_is_rejected(self):
+        # vue 栈同判据
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<div class="jjui-wizard-progress">步骤 1 / 3：绑定一个或多个数据源</div><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("向导弹框禁底部进度描述行", result.stderr)
+
+    def test_wizard_vertical_steps_in_modal_is_rejected(self):
+        # 弹框内禁竖向步骤条：横向顶部为唯一配方（判据正源: composition-layer.md 表单段向导弹框条）
+        target = self.init_stack("react-antd")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<Modal open title="创建对象类型"><Steps direction="vertical" items={[{ title: "数据源" }]} /></Modal><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("弹框内禁竖向步骤条", result.stderr)
+
+    def test_wizard_vertical_steps_in_modal_vue_is_rejected(self):
+        # vue 栈同判据：el-dialog 内 el-steps direction="vertical" 即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<el-dialog title="创建对象类型"><el-steps direction="vertical" /></el-dialog><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("弹框内禁竖向步骤条", result.stderr)
+
+    def test_wizard_step_description_long_sentence_is_rejected(self):
+        # 步骤描述单源分工：description 仅 ≤8 字短词组，整句说明放当前步内容区顶部（判据正源: composition-layer.md 表单段）
+        target = self.init_stack("react-antd")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("步骤条描述仅允许", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<Steps items={[{ title: "数据源", description: "绑定一个或多个数据源并映射主键" }]} /><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("步骤条描述仅允许", result.stderr)
+        self.assertIn("绑定一个或多个数据源", result.stderr)
+
+    def test_wizard_step_description_long_sentence_vue_is_rejected(self):
+        # vue 栈同判据：el-step description 长句即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<el-steps><el-step title="数据源" description="绑定一个或多个数据源并映射主键" /></el-steps><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("步骤条描述仅允许", result.stderr)
+
+    def test_wizard_step_note_pileup_is_rejected(self):
+        # 向导步内说明文字纪律：小标题 + 灰字说明两条说明文本即堆积（判据正源: composition-layer.md 表单段）
+        target = self.init_stack("react-antd")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("向导步说明文字堆积", baseline_result.stderr)
+        self.assertNotIn("说明条混入表单控件行间", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<Modal open title="创建对象类型"><Steps items={[{ title: "数据源" }]} /><p>绑定数据源</p><p>各数据源彼此对等，每个源都要映射到同一个主键属性</p></Modal><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("向导步说明文字堆积", result.stderr)
+        self.assertIn("2 条说明文本", result.stderr)
+
+    def test_wizard_step_note_pileup_vue_is_rejected(self):
+        # vue 栈同判据：el-dialog 内小标题 + 灰字说明即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<el-dialog title="创建对象类型"><el-steps /><p>绑定数据源</p><p>各数据源彼此对等，映射同一主键属性</p></el-dialog><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("向导步说明文字堆积", result.stderr)
+
+    def test_wizard_inline_note_between_controls_is_rejected(self):
+        # 表单控件行间禁说明条：控件之后的 ≥8 字说明文本即拦（判据正源: composition-layer.md 表单段）
+        target = self.init_stack("react-antd")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<Modal open title="向导"><Steps items={[{ title: "数据源" }]} /><Input placeholder="数据源类型" /><div className="hint">支持分页 仅支持按主键关联的列式绑定，不支持行式合并</div></Modal><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("说明条混入表单控件行间", result.stderr)
+
+    def test_wizard_inline_note_between_controls_vue_is_rejected(self):
+        # vue 栈同判据：el-input 之后说明条即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<el-dialog title="向导"><el-steps /><el-input placeholder="数据源类型" /><div class="hint">仅支持按主键关联的列式绑定，不支持行式合并</div></el-dialog><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("说明条混入表单控件行间", result.stderr)
+
     def test_table_header_descriptive_title_is_rejected(self):
         # 卡头禁描述性标题：卡头内非按钮文本以「列表/清单」结尾即拦（判据正源: composition-layer.md 工具栏段）
         target = self.init_stack("react-antd")
@@ -363,6 +535,185 @@ class JjuiToolsTest(unittest.TestCase):
         self.assertIn("表格卡头禁描述性标题", result.stderr)
         self.assertIn("对象类型清单", result.stderr)
         self.assertNotIn("同步列表", result.stderr)
+
+    def test_count_text_outside_pagination_is_rejected(self):
+        # 总数单源：「共/记录 N 条」式计数文字只允许出现在 .jjui-pagination 分页组内（判据正源: composition-layer.md 表格段）
+        target = self.init_stack("react-antd")
+        # 正向对照：未污染模板的分页组内总数（「共 {filtered.length} 条」）不触发本条
+        baseline_result = self.run_check(target)
+        self.assertNotIn("计数文字出现在分页组之外", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-table-header">',
+            '<div className="jjui-table-header"><span className="jjui-x">预览记录 {rows.length} 条</span>',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("计数文字出现在分页组之外", result.stderr)
+        self.assertIn("rows.length", result.stderr)
+
+    def test_count_text_outside_pagination_vue_is_rejected(self):
+        # vue 栈同判据：`{{ 表达式 }} 条` 计数文字落在分页组外即拦
+        target = self.init_stack("vue3-element-plus")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("计数文字出现在分页组之外", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-table-header">',
+            '<div class="jjui-table-header"><span class="jjui-x">预览记录 {{ rows.length }} 条</span>',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("计数文字出现在分页组之外", result.stderr)
+        self.assertIn("rows.length", result.stderr)
+
+    def test_table_text_note_below_table_is_rejected(self):
+        # 表格上下禁文字说明：卡头两翼结构的表格卡区块内，表格下方说明句即拦（判据正源: composition-layer.md 工具栏段）
+        target = self.init_stack("react-antd")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("表格上下禁文字说明", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '<div className="jjui-pagination">',
+            '<p className="jjui-x">以下为客户数据展示说明</p><div className="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("表格上下禁文字说明", result.stderr)
+        self.assertIn("以下为客户数据展示说明", result.stderr)
+
+    def test_table_text_note_below_table_vue_is_rejected(self):
+        # vue 栈同判据：分页组外的说明文字剥除分页块后仍被查获
+        target = self.init_stack("vue3-element-plus")
+        baseline_result = self.run_check(target)
+        self.assertNotIn("表格上下禁文字说明", baseline_result.stderr)
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '<div class="jjui-pagination">',
+            '<p class="jjui-x">以下为客户数据展示说明</p><div class="jjui-pagination">',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("表格上下禁文字说明", result.stderr)
+        self.assertIn("以下为客户数据展示说明", result.stderr)
+
+    def test_table_header_create_after_search_is_rejected(self):
+        # 卡头左翼顺序固定：主操作在前、快捷搜索在后，颠倒即拦（判据正源: composition-layer.md 工具栏段）
+        target = self.init_stack("react-antd")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '''              <Button type="primary" icon={<PlusOutlined />} data-jjui-action="p-02.create" onClick={onCreate}>
+                新建客户
+              </Button>
+              <Input
+                data-jjui-action="p-02.quick-search"
+                prefix={<SearchOutlined />}
+                placeholder="快捷搜索客户"
+                style={{ width: "var(--control-width)" }}
+                value={quickSearch}
+                onChange={(event) => {
+                  setQuickSearch(event.target.value);
+                  setCurrent(1);
+                }}
+                allowClear
+              />
+''',
+            '''              <Input
+                data-jjui-action="p-02.quick-search"
+                prefix={<SearchOutlined />}
+                placeholder="快捷搜索客户"
+                style={{ width: "var(--control-width)" }}
+                value={quickSearch}
+                onChange={(event) => {
+                  setQuickSearch(event.target.value);
+                  setCurrent(1);
+                }}
+                allowClear
+              />
+              <Button type="primary" icon={<PlusOutlined />} data-jjui-action="p-02.create" onClick={onCreate}>
+                新建客户
+              </Button>
+''',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("主操作须在快捷搜索左侧", result.stderr)
+
+    def test_table_header_create_after_search_vue_is_rejected(self):
+        # vue 栈同判据：主操作挪到快捷搜索之后即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '''            <el-button type="primary" data-jjui-action="p-02.create" @click="emit('create')">新建客户</el-button>
+            <el-input
+              v-model="quickSearch"
+              placeholder="快捷搜索客户"
+              style="width: var(--control-width)"
+              :prefix-icon="Search"
+              clearable
+              data-jjui-action="p-02.quick-search"
+              @input="currentPage = 1"
+            />
+''',
+            '''            <el-input
+              v-model="quickSearch"
+              placeholder="快捷搜索客户"
+              style="width: var(--control-width)"
+              :prefix-icon="Search"
+              clearable
+              data-jjui-action="p-02.quick-search"
+              @input="currentPage = 1"
+            />
+            <el-button type="primary" data-jjui-action="p-02.create" @click="emit('create')">新建客户</el-button>
+''',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("主操作须在快捷搜索左侧", result.stderr)
+
+    def test_table_header_create_in_right_wing_is_rejected(self):
+        # 主操作进右侧工具栏区域全场景禁止：右翼只放刷新/列设置等配置图标（判据正源: composition-layer.md 工具栏段）
+        target = self.init_stack("react-antd")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.tsx",
+            '''            <Space size={12}>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+''',
+            '''            <Space size={12}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>右翼新建</Button>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+''',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("右翼禁主操作", result.stderr)
+
+    def test_table_header_create_in_right_wing_vue_is_rejected(self):
+        # vue 栈同判据：右翼出现 primary 主操作按钮即拦
+        target = self.init_stack("vue3-element-plus")
+        self.patch_page(
+            target,
+            "src/pages/p-02-customer-list/features/customer-table.vue",
+            '''          <el-space :size="12">
+            <el-button size="small" :icon="Refresh"''',
+            '''          <el-space :size="12">
+            <el-button type="primary" @click="emit('create')">右翼新建</el-button>
+            <el-button size="small" :icon="Refresh"''',
+        )
+        result = self.run_check(target)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("右翼禁主操作", result.stderr)
 
     def test_unregistered_menu_mount_is_rejected(self):
         target = self.init_stack("react-antd")

@@ -89,19 +89,61 @@ def anchor_ok(value: str) -> bool:
 
 def table_header_window(source: str, header_pos: int) -> str:
     """提取 .jjui-table-header 卡头元素窗口（div 嵌套配对截取，避免固定窗口越界误伤表体文案）。"""
-    start = source.rfind("<div", 0, header_pos)
+    start, end = div_block_span(source, header_pos)
+    return source[start:end]
+
+
+def div_block_span(source: str, pos: int) -> tuple[int, int]:
+    """提取 pos 所在 div 元素的完整区间（含首尾标签）；找不到外层 div 时退化为固定窗口。"""
+    start = source.rfind("<div", 0, pos)
     if start < 0:
-        return source[header_pos:header_pos + 1200]
+        start = pos
     depth = 0
     for m in re.finditer(r"<div\b|</div>", source[start:]):
         if m.group(0) == "</div>":
             depth -= 1
             if depth == 0:
                 # finditer 在切片上匹配，m.end() 是相对切片的偏移，须加回 start
-                return source[start:start + m.end()]
+                return (start, start + m.end())
         else:
             depth += 1
-    return source[start:start + 1200]
+    return (start, start + 1200)
+
+
+def component_block_span(source: str, pos: int, tag: str) -> tuple[int, int]:
+    """提取 pos 所在 <tag> 组件元素的完整区间（嵌套配对截取）；pos 不在该类组件内时返回 (-1, -1)。"""
+    opens = [m.start() for m in re.compile(rf"<{tag}\b").finditer(source, 0, pos)]
+    if not opens:
+        return (-1, -1)
+    start = opens[-1]
+    depth = 0
+    for m in re.finditer(rf"<{tag}\b|</{tag}>", source[start:]):
+        if m.group(0) == f"</{tag}>":
+            depth -= 1
+            if depth == 0:
+                # finditer 在切片上匹配，m.end() 是相对切片的偏移，须加回 start
+                return (start, start + m.end())
+        else:
+            depth += 1
+    return (-1, -1)
+
+
+def strip_text_controls(frag: str) -> str:
+    """剥除承载可见文案的控件元素（按钮/复选/单选/开关/步骤条）；自闭合伪段只弃起点不吞内容。"""
+    ctrl = re.compile(r"<(Button|el-button|Checkbox|el-checkbox|Radio|el-radio|Radio\.Group|el-radio-group|Switch|el-switch|Steps|el-steps)\b")
+    out = frag
+    pos = 0
+    while m := ctrl.search(out, pos):
+        tag = m.group(1)
+        close = re.search(rf"</{re.escape(tag)}>", out[m.start():])
+        if close:
+            seg = out[m.start():m.start() + close.end()]
+            if not ctrl.search(seg[1:]):
+                out = out[:m.start()] + out[m.start() + close.end():]
+                pos = m.start()
+                continue
+        pos = m.start() + 1
+    return out
 
 
 def replace_tokens(root: Path, product_id: str, business: str) -> None:
@@ -440,6 +482,71 @@ def validate_root(root: Path) -> list[str]:
             window = source[max(0, m.start() - 600):m.end() + 600]
             if not re.search(r"onClick|@click|onConfirm|onChange|@change|@input|onOk|itemRender|v-model|Popconfirm|Dropdown|Link|navigate|router|href|submit|rules|validateFields|Form\.Item|el-form-item", window):
                 errors.append(f"操作无可演示反馈（死按钮：须有 onClick/@click 打开弹框、切换状态、导航或 message 反馈）: {page_id} {m.group(0)}")
+        # 返回控件只允许图标（判据正源: references/composition-layer.md 页面段——返回控件不得带可见文字，
+        # 「返回列表」式文字按钮即拦；自闭合图标按钮的 aria-label="返回" 在属性内，不进可见文本，不误伤）
+        # 自闭合图标按钮（刷新/列设置等）无配对闭合，其扫描段会跨到后续真按钮形成伪段——
+        # 逐起点扫描，伪段只弃用该起点并前进一位，不吞掉段内真按钮的起点
+        btn_scan = re.compile(r"<Button\b|<el-button\b")
+        bpos = 0
+        while bm := btn_scan.search(source, bpos):
+            tag = "Button" if bm.group(0) == "<Button" else "el-button"
+            close_m = re.search(rf"</{tag}>", source[bm.start():])
+            if close_m:
+                seg = source[bm.start():bm.start() + close_m.end()]
+                if not re.search(r"<(?:Button|el-button)\b", seg[1:]):
+                    inner = re.sub(r"<[^<>]*>", "", seg)
+                    inner = re.sub(r"\{.*?\}", "", inner, flags=re.S)
+                    if "返回" in inner:
+                        errors.append(
+                            f"返回控件只允许图标（禁「{inner.strip()[:12]}」式文字返回按钮，无障碍语义走 aria-label）: {page_id}"
+                        )
+            bpos = bm.start() + 1
+        # 向导弹框配方（判据正源: references/composition-layer.md 表单段——弹框内一律横向顶部步骤条，
+        # 描述单源分工；竖向步骤条仅全屏流程页/时间线合法；底部进度描述行删除）
+        prog_m = re.search(r"步骤\s*\d+\s*[/／]\s*\d+", source)
+        if prog_m:
+            errors.append(
+                f"向导弹框禁底部进度描述行（「{prog_m.group(0)}」）——进度单源落在步骤条高亮: {page_id}"
+            )
+        for dm in re.finditer(r"<(Modal|el-dialog)\b", source):
+            cs_, ce_ = component_block_span(source, dm.start(), dm.group(1))
+            if cs_ >= 0 and re.search(r'direction="vertical"', source[cs_:ce_]):
+                errors.append(
+                    f"弹框内禁竖向步骤条（向导弹框一律横向顶部步骤条；竖向仅全屏流程页/时间线合法）: {page_id}"
+                )
+        for sm in re.finditer(r"<(Steps|el-steps)\b", source):
+            cs_, ce_ = component_block_span(source, sm.start(), sm.group(1))
+            seg = source[cs_:ce_] if cs_ >= 0 else source[sm.start():sm.start() + 800]
+            for dm2 in re.finditer(r'description[=:]\s*"([^"]*)"', seg):
+                if len(dm2.group(1)) > 8:
+                    errors.append(
+                        f"步骤条描述仅允许 ≤8 字短词组（「{dm2.group(1)[:12]}」）——整句说明放当前步内容区顶部，二者不并存: {page_id}"
+                    )
+        # 向导步内说明文字纪律（判据正源: references/composition-layer.md 表单段——一步内可见说明只允许
+        # 一条，由步骤条 description 或当前步内容区顶部一句二选一承载；小标题/行间说明条禁，
+        # 字段级约束走 extra/tooltip 属性，属性文字不产生文本节点）
+        for dm in re.finditer(r"<(Modal|el-dialog)\b", source):
+            wcs, wce = component_block_span(source, dm.start(), dm.group(1))
+            if wcs < 0 or not re.search(r"<Steps\b|<el-steps\b", source[wcs:wce]):
+                continue
+            frag_ctrl = strip_text_controls(source[wcs:wce])
+            nodes = [(m.start(1), m.group(1).strip()) for m in re.finditer(r">([^<>{}\n]+?)<", frag_ctrl)]
+            notes = [(p, t) for p, t in nodes if len(t) >= 5]
+            if len(notes) > 1:
+                errors.append(
+                    f"向导步说明文字堆积（{len(notes)} 条说明文本，如「{notes[0][1][:12]}」）——一步内说明只允许"
+                    f"一条（步骤条 description 或当前步内容区顶部一句，二选一）: {page_id}"
+                )
+            anchor_m = re.search(
+                r"<(?:Input|el-input|Select|el-select|Form|el-form|InputNumber|el-input-number|DatePicker|el-date-picker|Upload|el-upload|Cascader|el-cascader)\b",
+                frag_ctrl,
+            )
+            if anchor_m:
+                late = [t for p, t in notes if p > anchor_m.start() and len(t) >= 8]
+                if late:
+                    errors.append(
+                        f"说明条混入表单控件行间（「{late[0][:12]}」）——字段级约束走字段辅助行（extra）或 tooltip: {page_id}"
+                    )
         # StatusTag 不承载说明句/拼接/计数（判据正源: references/composition-layer.md 状态段——label 须为字面量状态词）
         for m in re.finditer(r'<StatusTag\b[^>]*?(?<![:-])label="([^"]*)"', source):
             if re.search(r"[，。；：（）]", m.group(1)):
@@ -530,11 +637,11 @@ def validate_root(root: Path) -> list[str]:
             if recipe == "ide" and not re.search(r"<Tabs\b|<el-tabs\b", source):
                 errors.append(f"ide 页编辑器须用 Tabs/el-tabs 分区（消除右栏纵向长滚动）: {page_id}")
             # 嵌入式详情返回控件落位（判据正源: composition-layer.md 编辑器型页面段——
-            # 返回控件落位编辑器面板页头行左端（← 图标 + 文案，与 PageHeader titleline 同型），禁混入 Tabs 标签行）
+            # 返回控件落位编辑器面板页头行左端（← 图标，与 PageHeader 同型，不带文字），禁混入 Tabs 标签行）
             tpos = re.search(r"<Tabs\b|<el-tabs\b", source)
             if tpos and re.search(r"返回", source[tpos.start():tpos.start() + 2000]):
                 errors.append(
-                    f"返回控件禁止混入 Tabs 区（落位编辑器面板页头行左端：← 图标 + 文案，与 PageHeader 返回导航同型）: {page_id}"
+                    f"返回控件禁止混入 Tabs 区（落位编辑器面板页头行左端：← 图标，与 PageHeader 返回导航同型）: {page_id}"
                 )
             for m in re.finditer(obj_re, source):
                 window = source[max(0, m.start() - 600):m.end() + 600]
@@ -705,6 +812,57 @@ def validate_root(root: Path) -> list[str]:
                     f"表格卡头禁描述性标题文字（「{title_hit.group(1)}」）——卡头左翼只放主操作+快捷搜索，"
                     f"列表语义由 PageHeader 页面标题或多区块页区块子标题承载: {page_id}"
                 )
+            # 主操作顺序与右翼侵入（判据正源: references/composition-layer.md 工具栏段——左翼顺序固定
+            # 主操作在前、快捷搜索在后；主操作进右侧工具栏区域全场景禁止，右翼只放配置图标）
+            input_m = re.search(r"<Input\b|<el-input\b", header_frag)
+            create_re = re.compile(r'type="primary"|>\s*(?:新建|新增|创建|注册|录入)')
+            create_m = create_re.search(header_frag)
+            if input_m and create_m:
+                if create_m.start() > input_m.start():
+                    errors.append(
+                        f"表格卡头主操作须在快捷搜索左侧（左翼顺序固定主操作在前、快捷搜索在后）: {page_id}"
+                    )
+                elif create_re.search(header_frag, input_m.start()):
+                    errors.append(
+                        f"表格卡头右翼禁主操作（主操作进右侧工具栏区域全场景禁止，右翼只放刷新/列设置等配置图标）: {page_id}"
+                    )
+            # 表格上下禁文字说明（判据正源: references/composition-layer.md 工具栏段——卡头两翼结构的
+            # 表格卡区块内可见文字只允许操作控件文案与分页元数据；说明性文字由 PageHeader 页面描述承载）
+            card_start, card_end = component_block_span(source, source.find("jjui-table-header"), "SectionCard")
+            if card_start >= 0:
+                frag = source[card_start:card_end]
+                # 剥除卡头块（卡头判据见上条）与分页块（分页元数据合法，见「表格」段总数单源条）
+                hs, he = div_block_span(frag, frag.find("jjui-table-header"))
+                frag_wo = frag[:hs] + frag[he:]
+                p_pos = frag_wo.find("jjui-pagination")
+                if p_pos >= 0:
+                    ps, pe = div_block_span(frag_wo, p_pos)
+                    frag_wo = frag_wo[:ps] + frag_wo[pe:]
+                frag_wo = re.sub(r"<Button\b.*?</Button>|<el-button\b.*?</el-button>", "", frag_wo, flags=re.S)
+                desc_hit = next(
+                    (m for m in re.finditer(r">\s*([^<>{}\n]+?)\s*<", frag_wo) if m.group(1).strip()),
+                    None,
+                )
+                if desc_hit:
+                    errors.append(
+                        f"表格上下禁文字说明（「{desc_hit.group(1).strip()[:16]}」）——说明性文字由 PageHeader 页面描述承载，"
+                        f"表格卡区块内只允许操作控件文案与分页元数据: {page_id}"
+                    )
+        # 总数单源（判据正源: references/composition-layer.md 表格段总数单源条——总数/记录数文字
+        # 单源在 .jjui-pagination 分页组内；承载分页表格的区块头部/子标题行禁再放计数文字）
+        count_text_re = re.compile(r"(?:共|记录)\s*(?:\$?\{[^<>`\n]{0,40}?\}|\d+)\s*条")
+        if "jjui-pagination" in source:
+            legal_spans = [
+                div_block_span(source, m.start())
+                for m in re.finditer(r"jjui-pagination(?=[\"' ])", source)
+            ]
+            for count_hit in count_text_re.finditer(source):
+                if not any(span_start <= count_hit.start() < span_end for span_start, span_end in legal_spans):
+                    errors.append(
+                        f"计数文字出现在分页组之外（「{count_hit.group(0).strip()}」）——总数单源在 .jjui-pagination "
+                        f"分页组内，区块头部/子标题行禁再放「共 N 条」「记录 N 条」式计数文字: {page_id}"
+                    )
+                    break
         page_meta[page_id] = {
             "route": route,
             "entry": expected_entry,

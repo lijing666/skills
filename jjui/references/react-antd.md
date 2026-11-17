@@ -93,3 +93,4 @@
 - 流程骨架用 `Steps`，竖向加 `orientation="vertical"`（v6 起 `direction` 已废弃）；步骤详情用 `items[].content` 内嵌（v6 起 `description` 已废弃，误用会被运行时静默丢弃且 tsc 不报错——`.map()` 返回值不受多余属性检查约束）。
 - 步骤状态用 `current` / `status` 表达完成与进行中。
 - 不用多张卡片模拟步骤，也不用无序列表模拟步骤条。
+- 向导步骤内含表单时（如 Modal 内 Steps 多步创建），每步的表单内容走 `composition-layer.md` 表单段全部判据——字段槽等宽、label 定宽、就地校验、底部按钮规范对向导内表单同样生效，向导容器不豁免。

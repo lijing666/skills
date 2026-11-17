@@ -85,3 +85,4 @@
 - 流程骨架用 `el-steps`（`direction="vertical"`）加 `el-step`；步骤详情放 `el-step` 的 `description` 或紧跟其后的内容区。
 - 步骤状态用 `active` / `finish-status` 表达完成与进行中。
 - 不用多张卡片模拟步骤，也不用无序列表模拟步骤条。
+- 向导步骤内含表单时（如 `el-dialog` 内 `el-steps` 多步创建），每步的表单内容走 `composition-layer.md` 表单段全部判据——字段槽等宽、label 定宽、就地校验、底部按钮规范对向导内表单同样生效，向导容器不豁免。
