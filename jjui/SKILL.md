@@ -2,7 +2,7 @@
 name: jjui
 description: "管理后台前端原型生成 skill：基于 React+Ant Design 或 Vue3+Element Plus 生成可运行、可冻结、可直接接入 jjspec HTML 原型路线的后台原型工程。适用于客户/订单/运营/配置类后台、列表-详情-表单-设置页面，以及需要用真实组件库替代手绘页面、并把原型交付给 jjspec 做后续 UI 规范与实现验收的场景；不适用于营销页、小程序、移动端、图片像素级还原、真实后端或生产级架构。"
 metadata:
-  version: 0.2.41
+  version: 0.2.43
   created: "2026-11-08"
 ---
 
@@ -39,7 +39,7 @@ metadata:
 5. **实现页面**：先读 `references/page-splitting.md` 做页面内四层归属判定（Page / Feature / Service / Shared），Service 契约落 `src/services/`，封闭交互单元落 `features/`；再按栈读 `references/react-antd.md` 或 `references/vue3-element-plus.md`；按页面计划的 `composition.recipe` 用组合层组件排布，以组件库组件填充内容。
 6. **锚点与分层**：给页面、区域、操作、动态区加稳定 `data-jjui-*` 锚点；静态结构文案入页面计划，动态数据放显式 `data-jjui-data` 区。
 7. **机械校验**：运行 `scripts/check_prototype.py <原型目录>`；修复到 PASS。
-8. **实跑验证**：按 manifest 启动工程，逐页实跑，确认无控制台错误、页面不空白、声明交互可演示；每页只留 1 张 `<page_id>-baseline.png`（绝对路径 `.jjui/reports/screenshots/`），重拍时**同名覆盖**；即时查看的截图落 `/tmp` 看完即删，不进工程目录；场景证据按评审需要临时导出到工程外（走截图物证纪律）。每张落盘后立即核验存在且非 0 字节；交付前用 `scripts/evidence.py check` 逐页对账（命名 + 非 0 字节）。交互演示一律用 playwright 原生 click/fill 等真实输入事件，禁止 JS `el.click()` 注入点击——antd 等组件的事件可能不响应注入点击，会误判交互失效。**升级依赖后必须重启 dev server 再验证**（旧进程的 `.vite/deps` 预构建残留会静默供给旧版组件，让新 API"看起来未实装"；必要时删 `node_modules/.vite`）。行为级必演示条目（逐条浏览器实跑确认，机械校验不覆盖，未演示 = 未验证）：①每个登记的表单提交操作必演示一次非法提交（空必填或非法格式），确认错误**就地展示**在字段下方而非弹 `message` 提示框拦截（判据正源：`composition-layer.md` 表单段校验条）；②新增行/新增项类操作演示后，确认新项处于**可编辑态**（字段控件可输入修改），不是只读展示行。工作流 B/C 的"实跑验证"即指含本条目清单的验证。
+8. **实跑验证**：按 manifest 启动工程，逐页实跑，确认无控制台错误、页面不空白、声明交互可演示；截图按 `references/prototype-contract.md` 截图物证纪律段落盘，每张落盘后立即核验存在且非 0 字节；交付前用 `scripts/evidence.py check` 逐页对账（命名 + 非 0 字节）。交互演示一律用 playwright 原生 click/fill 等真实输入事件，禁止 JS `el.click()` 注入点击——antd 等组件的事件可能不响应注入点击，会误判交互失效。**升级依赖后必须重启 dev server 再验证**（旧进程的 `.vite/deps` 预构建残留会静默供给旧版组件，让新 API"看起来未实装"；必要时删 `node_modules/.vite`）。行为级必演示条目（逐条浏览器实跑确认，机械校验不覆盖，未演示 = 未验证）：①每个登记的表单提交操作必演示一次非法提交（空必填或非法格式），确认错误**就地展示**在字段下方而非弹 `message` 提示框拦截（判据正源：`composition-layer.md` 表单段校验条）；②新增行/新增项类操作演示后，确认新项处于**可编辑态**（字段控件可输入修改），不是只读展示行。工作流 B/C 的"实跑验证"即指含本条目清单的验证。
 9. **交付**：输出启动命令、页面清单、已实现交互、Mock 假设和未验证项，以及"规范坑回流清单"——执行过程中发现的与技能判据冲突的组件库事实（版本差异、API 不存在、静默失败）；不宣称业务需求或生产验收通过。
    - 回流纪律：每条回流必须给出可定位源（文件 + 行号 + 原文引用），引用不出原文的判断一律不提出；版本口径以模板 `package.json` 为准，引用他版资料先声明版本差异。
    - 新鲜度纪律：重载技能或跨会话续作时，先重读本次工作涉及的判据正源（`references/*.md`）再下结论，不得拿缓存 grep 结果或记忆当现状；判据是否漂移以 `manifest.jjui_version` 与 SKILL.md 声明的技能版本对账为准（不一致时 `check_prototype.py` 必报）。
@@ -59,10 +59,10 @@ metadata:
 
 存量工程按当前判据全面自查与修复，适用于判据更新后清理旧工程、或交付前全面验收：
 
-1. **逐页实跑截图**：按 manifest 启动工程，每页落 1 张 `<page_id>-baseline.png`（绝对路径 `.jjui/reports/screenshots/`，同名覆盖重拍）；即时查看图落 `/tmp` 看完即删（走截图物证纪律）。
+1. **逐页实跑截图**：按 manifest 启动工程，按 `references/prototype-contract.md` 截图物证纪律段逐页落图。
 2. **对照判据检查**：以 `references/composition-layer.md` 全部判据为清单逐条对照；壳层与全局组件问题（布局壳、菜单、指标卡等）单列在前。
-3. **输出违规清单**：每条 = 页面 + 判据名 + 证据（baseline 路径；场景图按需临时导出到工程外）+ 修复建议；经确认后再动手修复。
-4. **修复与回归**：修复后重跑 `check_prototype.py` 与 `evidence.py check`，同名覆盖重拍受影响页 baseline；本工作流只引用判据正源，不复述判据内容。
+3. **输出违规清单**：每条 = 页面 + 判据名 + 证据（截图路径；场景图按需临时导出到工程外）+ 修复建议；经确认后再动手修复。
+4. **修复与回归**：修复后重跑 `check_prototype.py` 与 `evidence.py check`，同名覆盖重拍受影响页截图；本工作流只引用判据正源，不复述判据内容。
 
 ## 资源索引
 
@@ -70,7 +70,7 @@ metadata:
 |---|---|
 | `references/composition-layer.md` | 实现页面、扩展组合组件或调整样式基线时 |
 | `references/page-splitting.md` | 页面内四层拆分（Feature / Service 归属判定）或对既有页面增量修改前 |
-| `references/prototype-contract.md` | 初始化、调整目录、manifest/page-plan/bridge 或锚点时 |
+| `references/prototype-contract.md` | 初始化、调整目录、manifest/page-plan/bridge 或锚点时；实跑截图与交付物证对账时 |
 | `references/page-archetypes.md` | 做页面封闭清单或判定页面类型时 |
 | `references/react-antd.md` | React 路线实现页面时 |
 | `references/vue3-element-plus.md` | Vue 路线实现页面时 |
