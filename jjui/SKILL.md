@@ -18,7 +18,7 @@ metadata:
 - **Token**：`src/styles/tokens.css` 统一色彩、间距、圆角、阴影；页面样式不得绕过 Token。
 - **组件**：`src/components/admin/` 下七个受控组合组件——`PageHeader`、`SectionCard`、`MetricCard`、`Toolbar`、`StatusTag`、`EmptyState`、`MasterDetail`；页面必须声明并实际使用计划内组件。
 - **配方**：每页在 page-plan 的 `composition.recipe` 中登记排布配方（`dashboard` / `list` / `detail` / `form` / `settings` / `workspace` / `canvas` / `ide`），机械校验拒绝配方外排布与"声明未使用"组件。
-- **文案语言**（本条为文案语言正源，`composition-layer.md` 不复述）：原型全部用户可见文案（标题、描述、label、按钮、提示、说明、空态）一律中文——真实产品中这些字符串走 i18n 词条，原型直接落中文定稿。判据只问一句：**这串字符将来要不要翻译？** 要翻译的必须已是中文；机器标识符不受限（枚举值、事件名、状态机标识、样例标识如 `SCHEMA_PUBLISHED`、`batch`、`qwen3-4b-local` 是代码常量，不是文案）。
+- **文案语言**（本条为文案语言正源，`composition-layer.md` 不复述）：原型全部用户可见文案（标题、描述、label、按钮、提示、说明、空态）一律中文——真实产品中这些字符串走 i18n 词条，原型直接落中文定稿。判据只问一句：**这串字符将来要不要翻译？** 要翻译的必须已是中文；机器标识符不受限（枚举值、事件名、状态机标识、样例标识如 `SCHEMA_PUBLISHED`、`batch`、`qwen3-4b-local` 是代码常量，不是文案）。文档内部编号（`R15`、`ADR-0003`）与裸错误码（`409 DATA_STALE`）不是机器标识符——它们指向文档或代码世界，用户看不懂，禁止进入可见文案；面向用户的提示只写现象、原因与下一步动作。
 
 判定与排布细节见 `references/composition-layer.md`。
 
