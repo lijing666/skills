@@ -10,7 +10,7 @@
 #   - enforcement_date 未到 → 只记录不阻断（冷启动攒基线）；阈值禁止"跑不过就放宽"
 #   - 不可变异文件类（如 *.sql）在 run 末尾追加 --exclude-glob，显式排除优于静默零变体
 #   - 断言语义真伪仍归人审三焦点——本 job 只执法强度
-# 本地自检（置 review/done 前，含工作区未提交改动）：
+# 本地自检（置 done 前，含工作区未提交改动）：
 #   bash .github/scripts/mutation-gate.sh HEAD --worktree
 jobs:
   mutation-gate:

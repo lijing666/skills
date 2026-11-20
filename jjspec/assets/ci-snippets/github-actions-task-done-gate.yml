@@ -1,0 +1,30 @@
+# GitHub Actions：done 语义对账 job（追加到现有 ci.yml 的 jobs: 下）
+# 依赖：
+#   1. assets/task-done-gate.sh 落于仓库 .github/scripts/
+#   2. 任务卡按 taskcard-template.md 声明 status/risk；risk-report.md 按「风险报告」节条目格式登记
+# 裁决口径（task-done-gate.sh --diff 内置，fail-closed；仅深查 diff 内在场 status=done 卡，archive 豁免）：
+#   - done 卡 ## 验收 逐条证据 + spec_ac 覆盖在场
+#   - risk: high 卡必须有风险报告条目：赌注行（含「对账点:」子句——伪赌注写不出真实世界对账位置，
+#     机械只兜格式在场，赌注真伪终审 = 提交时刻处置表态）或消解行（消解——担保来源声明）
+#   - 页面卡 ui-gate 三要素 / 行为卡红基线证据行
+#   - status != done 的卡跳过；diff 无在场 done 卡 → 通过
+# 闭环性：标 done 的提交必然触碰卡文件 → 卡必进 diff → 必被查；更早 PR 已查过的卡不重复深查
+#   （合入后归档 PR 因 archive 豁免跳过）。
+# 本地单卡自查（置 done 前）：.github/scripts/task-done-gate.sh <卡路径>
+jobs:
+  task-done-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 需要 diff 基准（PR 为 base 分支，push 为前一提交）
+      - name: done 语义对账（PR 用基准分支，push 用前一提交——覆盖不可禁直推的场景）
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            echo "无有效基准（首推/force push），跳过——PR 渠道仍会拦截。"
+            exit 0
+          fi
+          chmod +x .github/scripts/*.sh
+          .github/scripts/task-done-gate.sh --diff "${BASE}"

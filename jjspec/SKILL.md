@@ -3,14 +3,14 @@ name: jjspec
 description: "AI 架构师工作流 skill：以 AI 友好架构五属性（可理解性/可分解性/显式性/可验证性/可回滚性）编写 PRD、需求 Spec、架构设计文档、任务卡；执行九步交付 SOP（预检→规则先行→PRD 打磨→Spec→方案三查→任务卡 DAG→分级执行→门禁灰度→观测回流），直通/走门双模式，走门停在方案三查等用户批准；含项目接入体检、执法物料包（AGENTS.md 模板/越界检测/风险区门禁/测试对应性门禁/import-linter/ArchUnit）。当用户要求：编写需求文档/PRD/打磨需求/多模块需求/分册需求/拆分需求/架构设计/HLD/任务拆解/任务卡/ADR，或说 jjspec/写需求/按 PRD 开工/直接开工/只写 prd/只写 spec/只写 task/修 bug 任务/SOP/项目接入体检/生成 UI 规范/绑定 UI 规范（配套 HTML 原型或 Figma 设计稿），或要求按 AI 架构师规范交付时使用。"
 metadata:
   agent_created: true
-  version: 1.20.1
+  version: 1.22.0
   created: "2026-09-29"
   source: "《AI 架构师五天教程》课程沉淀（用户深度参与修订）"
 ---
 
 # jjspec · AI 架构师工作流
 
-把软件工程知识从人脑搬进 AI 的一等公民上下文：AI 按本 skill 产出文档与代码，人类架构师只保留 **PRD 定稿权**、**方案批准三查**和**人审三焦点**。
+把软件工程知识从人脑搬进 AI 的一等公民上下文：AI 按本 skill 产出文档与代码，人类架构师只保留 **PRD 定稿权**、**方案批准三查**、**风险赌注受理**（异常停泊升级 + 风险报告审读，判据见 taskcard-template.md 拆卡规则 5 与风险报告节）——人审三焦点（gates.md）沿用为抽审与赌注审读口径。
 
 ## 核心理念（一切决策的依据）
 
@@ -31,7 +31,7 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 
 | 用户指令 | AI 行为 |
 |---|---|
-| 写需求 X / 打磨需求 X / 只写 prd X | ①只读预检 → ③产出 `changes/<需求ID>/prd.md`（status: draft→评审中）；②规则缺口只记建议，待澄清问题集中在附 D，**停在定稿前**——定稿只能由用户指令触发 |
+| 写需求 X / 打磨需求 X / 只写 prd X | ①只读预检 → ③产出 `changes/<需求ID>/prd.md`（status: draft→评审中）；②规则缺口只记建议，待澄清问题集中在附 D，打磨收尾跑四查（宪法第八节，结果登记版本表「四查」列），**停在定稿前**——定稿只能由用户指令触发 |
 | 多模块需求 X / 分册需求 X / 拆分需求 X | 按 `references/prd-splitting.md` 以「主 prd.md + prd-<序号>-<模块>.md」分册起稿（新需求）或迁移拆分（存量整稿）；①②③照常但产物为分册，校验按 `references/prd-splitting.md` 由 AI 自行执行全绿后停在定稿前；④起 Spec、⑤HLD、⑥任务卡及后续步骤不变（spec/hld 仍单文件）。仅显式指令触发，不做自动判定 |
 | 定稿 X / PRD 定稿（仅用户可发） | PRD status 置"已定稿" + 版本表登记，停在开工前；用户同句要求"定稿并开工"则直接进入下行 |
 | 按 PRD 开工 X / 开发 X | 落点自检（宪法第八节第 3 条：复用已有需求目录、禁嵌套同名目录段、歧义停下确认）→ 校验 `changes/<需求ID>/prd.md` 的定稿对当前版本有效（正主唯一，副本上的状态/批准无效）→ 复查①并落实② → 判定模式 → 直通执行④-⑥（⑥→⑦ 须过 task-dag-check.sh 完备性硬门 + 拆卡完成停靠等「继续」，见 taskcard-template.md 拆卡规则 2 与 ⑥行）再续⑦-⑨，或走门停在⑤；草稿/评审中不得进入实现 |
@@ -46,20 +46,20 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 |---|---|---|
 | ① 架构预检 | 影响面扫描 + 上下文供给检查（高风险区规则/ADR 是否齐）+ 一问：本次为「新建 / 改造 / 修复」哪类？（纯文档迁移/搬家——存量文档重组、格式转换——三分类不适用，过程中禁止语义变更：有语义变更即非迁移，回归三分类；分类结论及依据记入变更续接区「分类」行；适用边界：仅改造类触发行为对照验收，新建/修复不适用）改造且某行为同时满足「存在可对照的现成实现 + 目标要求行为与其平移/等价（非借思路重新设计）+ 现成契约文件无法直接覆盖」→ 该行为验收走行为对照；登记格式、逐行为粒度、排除项见 gates.md 行为对照验收节 | onboarding 已有则跳过 |
 | ② 规则先行 | 文档限定任务只记录缺口；获开工授权且需求明确后、编码前，补齐适用 AGENTS.md 规则与 ADR（风险区改动仍遵守批准要求） | assets/AGENTS.md.template, adr-template |
-| ③ PRD 打磨环 + 模式判定 | 需求与用户往复打磨（EARS 句式、非目标、失败场景），落 `changes/<需求ID>/prd.md`；按触线清单判定直通/走门 | prd-constitution.md, prd-template.md |
+| ③ PRD 打磨环 + 模式判定 | 需求与用户往复打磨（EARS 句式、非目标、失败场景），落 `changes/<需求ID>/prd.md`；每轮收尾轮末对账，收尾跑定稿前四查（宪法第八节）；按触线清单判定直通/走门 | prd-constitution.md, prd-template.md |
 | ④ 拆 Spec | 由定稿 PRD 逐卡拆 Spec：验收标准（GWT 可测）+ 非目标 + 边界约束 | spec-template.md |
 | ⑤ 方案起草 + 停靠门 | AI 起草 HLD；架构知识协助按 hld-template.md 用途块的"架构知识协助路由"执行（该块是唯一正源，不在此复述）；走门模式停在方案三查（查边界/查方向/查遗漏）等用户批准；打回意见与隐性约定当天回流 | hld-template.md 的三查节 |
-| ⑥ 任务卡 DAG | **硬门槛：未读 taskcard-template.md 不得产出任务卡（凭记忆复述格式曾致缺 `## 测试文件清单` 被 ac-coverage-check 拦截，2026-10-12）**；单窗口=单PR；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验；**DAG 完备性硬门：第一张卡开工前须过 task-dag-check.sh（AC 反向完备 + 依赖闭合），未过禁止进⑦**（判据与豁免口径见 taskcard-template.md 拆卡规则 2）；**拆卡完成即停靠**：硬门全绿后停，交付任务卡清单 + 调度方案（按四要素交付——单分支报拓扑序与首个业务闭环，多分支按拆卡规则 3 四要素交选），明示「已停在⑥」，获用户「继续」指令才进⑦——单卡与缺陷修复不豁免（上下文中断后靠落盘任务卡 + 状态即续接恢复，无停靠即无恢复点） | taskcard-template.md |
-| ⑦ 分级执行 | 低风险 Agent 自主循环（前置低风险卡 done 即解堵下游，连续执行不等提交）；高风险逐卡 + 100% 人审（置 review 必附人审请示材料包，人审通过才解堵下游；「合入」与解堵脱钩，提交窗口按拓扑序批量执行）；多卡并行按 ⑥ 交付的调度方案执行（判据见 taskcard-template.md 拆卡规则 3）；验证设施连续扩建且业务 AC 未过 → 触发验证路径重估（设施枚举与判据见 gates.md AL2 异常出口·验证路径重估） | gates.md |
+| ⑥ 任务卡 DAG | **硬门槛：未读 taskcard-template.md 不得产出任务卡（凭记忆复述格式曾致缺 `## 测试文件清单` 被 ac-coverage-check 拦截，2026-10-12）**；单卡 = 单窗口；默认单卡单模块（跨模块原子变更须注明理由）；拆出依赖图，无环校验；**DAG 完备性硬门：第一张卡开工前须过 task-dag-check.sh（AC 反向完备 + 依赖闭合），未过禁止进⑦**（判据与豁免口径见 taskcard-template.md 拆卡规则 2）；**拆卡完成即停靠**：硬门全绿后停，交付任务卡清单 + 调度方案（按四要素交付——单分支报拓扑序与首个业务闭环，多分支按拆卡规则 3 四要素交选），明示「已停在⑥」，获用户「继续」指令才进⑦——单卡与缺陷修复不豁免（上下文中断后靠落盘任务卡 + 状态即续接恢复，无停靠即无恢复点） | taskcard-template.md |
+| ⑦ 分级执行 | AL1 逐卡执行 `risk: high` 卡（= 预计产出红线赌注，判据见 taskcard-template.md 拆卡规则 5），AL2 自主循环低风险卡；**解堵统一 = 前置卡 done**（卡级同步人审已废止，风险赌注走风险报告异步受理）；赌注条目 done 前写入 `changes/<需求ID>/risk-report.md`，修复路径触及上游工件 → 异常停泊升级；全部卡 done 随交付主动全量展示报告，提交窗口待读条目逐条表态后放行；「合入」与解堵脱钩，提交窗口按拓扑序批量执行；多卡并行按 ⑥ 交付的调度方案执行；验证设施连续扩建且业务 AC 未过 → 触发验证路径重估（设施枚举与判据见 gates.md AL2 异常出口·验证路径重估） | gates.md, taskcard-template.md |
 | ⑧ 三层门禁 + 开关灰度 | 机械 → 行为（测试对应性〔含集成标记〕+ 断言强度采样）→ AI 特有（越界/风险区/幻觉/缺测试），全绿才合入；开关与灰度判据（含新工程/新端首上线免开关口径）见 hld-template.md 观测与灰度声明节，不可逆变更显式标注恢复方式 | gates.md, assets/extract-boundary.sh, assets/boundary-check.sh, assets/ac-coverage-check.sh, assets/mutation-gate.sh, assets/risk-zone-check.sh, hld-template.md |
 | ⑨ 观测 + 回流 | 观测期按风险定（默认 48h），指标/负责人/结束条件声明落 HLD 观测与灰度声明节（判据正源）→ 到期取数对照结束条件（对账附发布证据包）、负责人拍板转正/回滚 → 教训归因到知识层 L1~L4 → 体系升级 | feedback-loop.md |
 
-**模式判定（触线清单，命中任一 → 走门，全不命中 → 直通）**：风险区（AGENTS.md 第 5 节清单）· 跨模块接口变更 · 全局运行时行为（AOP/拦截器/全局配置）· schema 迁移/不可逆变更 · 金额/幂等/并发 · 预计 ≥3 张任务卡——与三层门禁分层抽审的 100% 人审维度对齐（gates.md）。
+**模式判定（触线清单，命中任一 → 走门，全不命中 → 直通）**：风险区（AGENTS.md 第 5 节清单）· 跨模块接口变更 · 全局运行时行为（AOP/拦截器/全局配置）· schema 迁移/不可逆变更 · 金额/幂等/并发 · 预计 ≥3 张任务卡——与三层门禁分层抽审维度对齐（gates.md；跨模块接口/全局运行时行为经 G2 审设计，卡级赌注走风险报告）。
 
 - **直通模式**：已获开工授权时，④-⑨ 不另设方案批准停靠；Spec/HLD 以 `draft` 进入拆卡与实现，随 PR 交付并按 gates.md 抽审；`draft` 不代表任务未执行。PRD 未覆盖的实现假设逐条标注，改变目标/AC/非目标/关键约束的假设须回 PRD 再定稿；合入、发布仍遵守项目权限与门禁。
 - **走门模式**：停在⑤交审当前 Spec/HLD，AI 不得自行宣布三查通过或批准；用户批准后记录所批版本，方可进入⑥。状态可随事实更新，`approved` 只能依据用户批准置位。
 - **变更时复判**：拆卡及执行中发现触线条件，立即转走门并停下受影响实现；语义修订撤销相关旧批准，按 `prd-constitution.md` 的修订规则重新评审，纯排版/错字修订豁免。
-- **状态即续接**：读取当前工件的版本、批准记录和续接区，再核对 HLD、任务卡、Git/PR 实况；PRD 定稿不等于开工授权，文档状态不等于执行阶段。字段与规则见 `prd-constitution.md`，无需另建台账。
+- **状态即续接**：读取当前工件的版本、批准记录和续接区，再核对 HLD、任务卡、Git/PR 实况；PRD 定稿不等于开工授权，文档状态不等于执行阶段。字段与规则见 `prd-constitution.md`，无需另建台账。执行中断点的处置判据见 taskcard-template.md 监督策略「断点处置」条——中断 = 物理边界，本条是恢复机制，不构成中断执行的许可。
 
 > **低风险小需求精简路径**（单卡内可完成、不触线）：走"直接开工"快速通道，轻量 PRD 一轮确认即定稿；④Spec 与⑤方案合一为单文档（三查并入卡评审，仅直通模式可用），⑥自然单卡无 DAG（拆卡后停靠不豁免，等「继续」再实现），⑧灰度按需。免打磨不等于免流程——AC、非目标、边界约束、门禁、回流一样不少。
 
@@ -110,12 +110,12 @@ PRD 是新需求的第一停靠点（人与 AI 都能读的桥梁：PRD 错，�
 - `assets/ui-pack-check.sh`：UI 规范包资产完整性门禁——README 资产类别登记 15 类封闭（颜色/字号/字重/行高/字体族/间距/圆角/边框/阴影/透明度/渐变/布局/动效/图标/位图素材，无值须显式豁免）、icons.json 存在合法、素材清单无未终态条目、页面编号连续、页面短名英文 kebab-case、每页含视觉锚点；`--require-digest` 模式另查 digest=quantified、四段规格、合法 `entry`，并对账 `source_node_count`、量化表与覆盖账本行数、两表源定位符集合及唯一性与汇总 `source=N spec=N uncovered=0`，另查 TEXT 范围样式与蒙版出处字段（6i/6j，设计稿路线每行必留 isMask/characterStyleOverrides 读取痕迹——字段缺失即拦，信号丢失在结构上不可能；mixed 未分解与蒙版缺作用目标仍拦；压平/虚登由 `--source-spot-check <REST nodes dump>` 回源字段 diff 证伪，存量包逐行拦截即缺失清单、回填节奏用户拍板）；该机械核对不能替代对原始 DOM/Figma 节点树的逐项扫描复核；`--require-final` 定稿清零门禁查「人工补录」挂起清零（宪法第九节第 11 条，fail-closed；回归测试 `ui-pack-check.test.sh`）
 - `assets/menu-recon-check.sh`：菜单三源对账门禁（页面卡「## 菜单/入口对账」固定节执法，宪法第九节第 12 条）——ui-specs 中 entry 含 menu 的页面清单 ↔ 实现工程路由注册表 ↔ PRD 非目标表排除名单，自造菜单/菜单缺失/排除命中均拦（fail-closed；回归测试 `menu-recon-check.test.sh`）
 - `assets/page-excerpt-check.sh`：UI 规格摘录对账门禁（页面卡「## UI 规格摘录」节执法）——N=M 严格对账：登记 N/M 必须纯数字且与节点样式摘录条目数、ui_source_page 各页量化表实际行数三方相等，覆盖账本摘录条数须与节点样式摘录一一对应（六块齐全：缺账本块/条数错配/缩进表格式逃逸均拦），占位符未替换/规则文字占位/漏转抄/指针悬空均拦（fail-closed；单卡模式供开工前自查——不通过不得写第一行代码，`--diff` 批量供 CI 打回；回归测试 `page-excerpt-check.test.sh`）
-- `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked/review 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有「人审通过」记录、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭）、**行为卡红基线登记行**（声明测试文件清单的卡 done 时缺行/占位即拦——骨架先行的机械执法锚点，豁免显影，判据正源 gates.md 测试骨架先行节；fail-closed；回归测试 `task-done-gate.test.sh`）
+- `assets/task-done-gate.sh`：done 语义门禁（仅深查 status=done，pending/in_progress/blocked 为合法中间态跳过）——验收节逐条证据、spec_ac 全覆盖验收节、risk: high 须有风险报告条目（红线条目含「- 赌注:」或消解行含「消解——」，v1.21.0 卡级同步人审废止——赌注申报是唯一义务）、页面卡 ui-gate 内容判据（必含视觉验收字样 + 差异或 n/m 数字 + PASS，且**按页面规格 source_anchor 路线感知**：HTML 路线只认 pixel-diff、设计稿路线只认结构化断言，路线谎报机械拦截——防验收器漂移与路线谎报；“待执行 + done”后门组合直接拦；先标 done 后补证据的时间窗由此关闭）、**行为卡红基线登记行**（声明测试文件清单的卡 done 时缺行/占位即拦——骨架先行的机械执法锚点，豁免显影，判据正源 gates.md 测试骨架先行节；fail-closed；回归测试 `task-done-gate.test.sh`）
 - `assets/doc-chain-check.sh`：文档链正主门禁（宪法第八节落点自检/正主唯一 + 批准效力正主判据的机械执法）——嵌套同名目录段（仅目录段，文件名含需求 ID 不受限）、同一需求 ID 核心文档多份（含活跃+归档双位置）、悬空批准（spec/hld approved 但正主 prd 未定稿；免 PRD 修复 Spec 无 prd.md 天然跳过）、状态自洽（approved 残留待批准 / draft 旧批准冒充 / 定稿与版本表不一致）均拦；archive 历史快照状态跳过、结构违例永久拦截；`--diff` 批量供 CI（fail-closed；回归测试 `doc-chain-check.test.sh`）
 - `assets/task-dag-check.sh`：任务卡 DAG 完备性门禁（⑥→⑦ 硬门，判据正源 taskcard-template.md 拆卡规则 2）——AC 反向完备（spec 每条 AC 至少被一张卡 `spec_ac` 认领 + 幻觉 AC 引用拦截，封堵滚动拆卡）、卡 `spec` 字段一致（防多 Spec 的 AC 编号歧义）、DAG 闭合（depends_on 引用存在 + Kahn 环检测，含自依赖）；无 tasks/ 未拆卡不拦（门禁对象是「开工而未闭合」不是「未拆卡」），无 spec.md 纯修复只查闭合与一致；单需求目录与项目根两模式，`--diff` 批量供 CI（fail-closed；回归测试 `task-dag-check.test.sh`）
 - `assets/pixel-diff.mjs`：HTML 原型路线逐卡内联视觉验收参考实现（本地跑，非 CI 物料——ui-gate 行 `pixel-diff <差异>% ≤ <PRD阈值>% PASS（命令:node pixel-diff.mjs ...）` 的可复跑命令本体）；基准 vs 实现截图逐像素对比，缺基准/截图/env.json/尺寸不一致/超阈值均 fail-closed，热区统计与 diff 返回值强制对账，env.json 机械校验视口/DPR/UA/字体就绪；`--out` 物化差异图/叠加图/热区三联裁剪 + report.json；阈值不因调优困难放宽，环境契约对齐后按热区归因修复。
 - `assets/visual-diagnose.mjs`：HTML 路线 pixel-diff FAIL 页热区级 DOM/CSS 诊断参考实现（本地跑，非 CI 物料）——消费 pixel-diff `--out` 的 report.json，按缩放比换算热区坐标后在实现页渲染态逐热区采样 elementsFromPoint，输出命中元素链及排版、盒模型、定位、布局、裁切与视觉效果等计算样式，供 AI 与页面规格量化表对读归因；按需登记级：项目侧 `npm i -D playwright pngjs`，实现侧 env.json 必须登记。
-- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查（extract-boundary + boundary-check）、测试对应性（ac-coverage-check）、风险区门禁与密钥扫描（gitleaks）job——均支持 PR 与 push 双基准，覆盖不可禁直推的场景
+- `assets/ci-snippets/`：import-linter（Python）/ ArchUnit（Java）/ GitHub Actions 越界检查（extract-boundary + boundary-check）、测试对应性（ac-coverage-check）、done 语义对账（task-done-gate：风险条目在场 + 赌注行对账点格式兜底）、风险区门禁与密钥扫描（gitleaks）job——均支持 PR 与 push 双基准，覆盖不可禁直推的场景
 - **脚本执行前提与跨平台兜底**（适用以上全部 `.sh`）：正源判据只有 bash 版一份，**不内置任何其他平台版本**——①主路径：bash 环境（macOS/Linux 原生；Windows 用 Git Bash 或 WSL 执行同一脚本，零改动）；②兜底：确无 bash 可用时（如 Windows-only CI runner），AI 在会话内参考脚本头部「校验清单」注释自编等价校验（如 PowerShell）——校验清单为唯一口径不得增删项、fail-closed 语义不变（检查不了 = 不通过）、输出逐项对账明细禁只报结论、落点与一次性使用纪律以「贯穿各场景的约定 · 临时工件清洁」条为正源（防双源漂移与口径自由发挥）；③本地执行的脚本（ui-pack-check.sh）在头部注明该口径语义正源地位
 - 物料分级：以上为**开箱可用**（boundary/ac-coverage job 无需按 PR 手改路径，风险区 job 无需配置；测试布局非典型时 --test-glob 登记）；DAG 完备性校验由 task-dag-check.sh 开箱承担（不再随项目测试框架自配）；人审三焦点（含 AC↔测试断言语义对应）为人工项
 

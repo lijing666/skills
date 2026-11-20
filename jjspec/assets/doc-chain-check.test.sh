@@ -113,6 +113,31 @@ d="$WORK/c16"; mkdir -p "$d/ui-specs/foo" "$d/ui-specs/foo-v2"
 printf '状态：可用\n' > "$d/ui-specs/foo/README.md"; printf '状态：可用\n' > "$d/ui-specs/foo-v2/README.md"
 expect "无 changes 目录仍执行规范包校验" 1 "同一基础段多个未归档规范包" "$d"
 
+# mk_case4q <名> <四查值>：版本表含「四查」列的新格式 prd
+mk_case4q() {
+  local d="$(mk_case $1)"
+  sed -i '' "s/| v1 | 已定稿 | 用户指令 |/| v1 | 已定稿 | 用户指令 | $2 |/" "$d/changes/x/prd.md"
+  sed -i '' 's/| 版本 | 状态 | 来源 |/| 版本 | 状态 | 来源 | 四查 |/' "$d/changes/x/prd.md"
+  echo "$d"
+}
+
+# ── 场景 17：新格式版本表（四查列）+ 最新行通过 → PASS
+expect "新格式四查通过放行" 0 "DOC-CHAIN PASS" "$(mk_case4q c17 通过)"
+
+# ── 场景 18：四查列存在但最新行未跑 → 拦（宪法第八节定稿前四查）
+expect "四查未跑定稿拦截" 1 "四查未通过" "$(mk_case4q c18 未跑)"
+
+# ── 场景 19：旧格式无四查列（存量）→ 不追溯 PASS（c1 即此形态，显式再验一次）
+expect "旧格式无四查列不追溯" 0 "DOC-CHAIN PASS" "$(mk_case c19)"
+
+# ── 场景 20：附D RESOLVED 无落点 → 拦（裁决断链）
+d="$(mk_case c20)"; printf '\n## 附D. 待澄清问题\n| Q | 内容 | 状态 |\n|---|---|---|\n| Q-08 | 补偿策略选甲 | [RESOLVED 2026-11-17 裁决：选甲方案] |\n' >> "$d/changes/x/prd.md"
+expect "RESOLVED 无落点拦截" 1 "裁决断链" "$d"
+
+# ── 场景 21：附D RESOLVED 带落点 → PASS
+d="$(mk_case c21)"; printf '\n## 附D. 待澄清问题\n| Q | 内容 | 状态 |\n|---|---|---|\n| Q-08 | 补偿策略选甲 | [RESOLVED 2026-11-17 裁决：选甲方案；落点 = REQ-EXEC-001] |\n' >> "$d/changes/x/prd.md"
+expect "RESOLVED 带落点放行" 0 "DOC-CHAIN PASS" "$d"
+
 echo
 echo "PASS: $PASS / $TOTAL"
 [ "$PASS" = "$TOTAL" ] && echo "ALL PASS" || exit 1

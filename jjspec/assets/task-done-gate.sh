@@ -12,20 +12,24 @@
 #      (格式约定见 taskcard-template ## 验收 节:`- <验收项>(AC-x) → 证据:<命令/结果/引用>`)
 #   ③ spec_ac 全覆盖:spec: 指向 Spec 声明的每个 AC 编号必须在验收节条目文本中出现
 #      (防验收清单漏 AC——声明了要负责的验收对象,验收节里却找不到)
-#   ④ risk: high 必须有人审通过记录(约定登记于验收证据:"人审通过 <日期> 批准人<X>")
+#   ④ risk: high 必须有风险报告条目(登记于 changes/<需求ID>/risk-report.md:红线条目含"- 赌注:",
+#      或消解行含"消解——"声明担保来源)——v1.21.0 卡级同步人审废止,赌注申报是唯一义务;消解行 =
+#      拆卡时预计的赌注在实现中发现已有担保时闭环(判据正源 = taskcard-template 拆卡规则 5 与风险报告节)
+#      格式兜底:赌注行须含「对账点(:|：)」子句(真实世界对账位置)——伪赌注(扩展性假设/工程信心/
+#      代码可核实事实)写不出对账点;机械只兜格式在场,赌注真伪终审 = 提交时刻处置表态
 #   ⑤ 页面卡(ui_source_page 非空)的执行进度 ui-gate 行必须非空且非"待执行"
 #      (ui-gate:待执行 + status:done = 后门组合,直接拦截)
 #   ⑥ 骨架先行红基线:声明「## 测试文件清单」的卡(行为卡代理)执行进度须有"- 红基线:"登记行
 #      且非占位(待执行/未验证/TODO)——断言先于实现的红基线留证缺失 = 骨架先行未执行,拦截
 #      (合法形态:『- 红基线:<命令> → N failed(先行失败留证)』或『- 红基线:豁免——<理由>』,
-#       豁免理由随卡人审;正源 = gates.md「测试骨架先行」节。实战教训:2026-10-23 三张行为卡
+#       豁免理由随需求交付展示;正源 = gates.md「测试骨架先行」节。实战教训:2026-10-23 三张行为卡
 #       测试与实现同批落盘、无红基线留证,全链门禁零报警——纯文字纪律无物料即静默失效)
 #
 # 用法:
 #   task-done-gate.sh <task卡路径>            # 单卡模式——置 done 前自查
 #   task-done-gate.sh --diff <base_ref> [changes_dir]   # 批量模式——CI 在场卡对账打回
 #
-# 配套:taskcard-template.md(status 枚举含 review;## 验收 节格式;拆卡规则 5 高风险卡状态机)
+# 配套:taskcard-template.md(status 枚举;## 验收 节格式;拆卡规则 5 赌注申报与异常停泊;风险报告节)
 # author: 李晶
 set -euo pipefail
 
@@ -73,7 +77,7 @@ list_items() {
 check_one_card() {
   local card="${1}"
 
-  # 仅深查 done;pending/in_progress/blocked/review 是合法中间态(review=待人审,不得越过)
+  # 仅深查 done;pending/in_progress/blocked 是合法中间态跳过
   local status
   status="$(fm "${card}" status)"
   if [ "${status}" != "done" ]; then
@@ -124,12 +128,31 @@ check_one_card() {
     fi
   fi
 
-  # ④ risk: high → 人审通过记录(登记于验收证据:人审通过 <日期> 批准人<X>)
+  # ④ risk: high → 风险报告条目(changes/<需求ID>/risk-report.md:红线条目含"- 赌注:"或消解行含"消解——")
+  #    v1.21.0 卡级同步人审废止——赌注申报是唯一义务;消解行 = 预测落空时闭环,须声明担保来源
   local risk
   risk="$(fm "${card}" risk)"
-  if [ "${risk}" = "high" ] && ! grep -q "人审通过" "${SEC_TMP}"; then
-    echo "🚫 ${card}:risk: high 卡 status=done 但验收节无『人审通过 <日期> 批准人<X>』记录——100% 人审被越过,fail-closed" >&2
-    failed=1
+  if [ "${risk}" = "high" ]; then
+    local cid req_dir report entry
+    cid="$(fm "${card}" id)"
+    req_dir="$(dirname "$(dirname "${card}")")"
+    report="${req_dir}/risk-report.md"
+    if [ ! -f "${report}" ]; then
+      echo "🚫 ${card}:risk: high 卡 status=done 但风险报告不存在(${report})——红线赌注未申报,fail-closed" >&2
+      failed=1
+    else
+      entry="$(awk -v id="${cid}" '$1=="###" && $2==id {f=1;next} $1=="###" && f{exit} f{print}' "${report}")"
+      if [ -z "${entry}" ]; then
+        echo "🚫 ${card}:risk: high 卡 status=done 但风险报告(${report})无本卡条目(### ${cid})——红线赌注未申报,fail-closed" >&2
+        failed=1
+      elif ! grep -qE "^- 赌注(:|：)" <<< "${entry}" && ! grep -q "消解——" <<< "${entry}"; then
+        echo "🚫 ${card}:风险报告本卡条目既无『- 赌注:』也无『消解——担保来源』——空壳条目,fail-closed" >&2
+        failed=1
+      elif grep -qE "^- 赌注(:|：)" <<< "${entry}" && ! grep -qE "^- 赌注(:|：).*对账点(:|：)" <<< "${entry}"; then
+        echo "🚫 ${card}:风险报告本卡条目的赌注行无『对账点:』子句——伪赌注(扩展性假设/工程信心/代码可核实事实)写不出真实世界对账位置,格式兜底 fail-closed(真伪终审=提交时刻处置表态)" >&2
+        failed=1
+      fi
+    fi
   fi
 
   # ⑤ 页面卡 ui-gate 内容判据:非待执行 + 视觉验收证据三要素 + 路线感知字样收紧
@@ -193,7 +216,7 @@ check_one_card() {
   fi
 
   [ "${failed}" -eq 1 ] && { FAILED=1; return 0; }
-  echo "  ✅ ${card}:done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + ui-gate + 红基线)"
+  echo "  ✅ ${card}:done 语义校验通过(逐条证据 + AC 覆盖 + 风险条目 + ui-gate + 红基线)"
 }
 
 # ---------- 模式分派 ----------
@@ -228,4 +251,4 @@ if [ "${FAILED}" -eq 1 ]; then
   echo "❌ done 语义校验不通过:存在虚假 done——验收逐项有证据才算完成,'我认为完成了'不算" >&2
   exit 1
 fi
-echo "✅ done 语义校验通过(逐条证据 + AC 覆盖 + 人审记录 + 页面卡 ui-gate + 行为卡红基线;语义定义见 taskcard-template status 行)"
+echo "✅ done 语义校验通过(逐条证据 + AC 覆盖 + 风险条目 + 页面卡 ui-gate + 行为卡红基线;语义定义见 taskcard-template status 行)"

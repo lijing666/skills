@@ -191,7 +191,7 @@ echo ""
 } >> "${EV}"
 
 # ── ⑥⑦ E2E 冒烟 + 契约校验证据行(格式正源 gates.md 发布证据包节;生产判据 = jjtest e2e-guide/contract-gates)──
-# 采集范围 = 需求目录全部 md(证据行登记于卡执行进度或发布记录摘录);显式豁免 = 合法挂起形态(理由随人审)
+# 采集范围 = 需求目录全部 md(证据行登记于卡执行进度或发布记录摘录);显式豁免 = 合法挂起形态(理由随需求交付展示)
 {
 echo "## ⑥ E2E 冒烟证据"
 evi="$(grep -rhoE 'e2e-smoke .+PASS.*命令' "${DIR}" --include='*.md' 2>/dev/null | head -1 || true)"
@@ -199,7 +199,7 @@ exm="$(grep -rhoE 'e2e-smoke(：|:)[[:space:]]*豁免——.+' "${DIR}" --includ
 if [ -n "${evi}" ]; then
   echo "- ${evi}"
 elif [ -n "${exm}" ]; then
-  echo "- ${exm}(显式豁免,理由随人审)"
+  echo "- ${exm}(显式豁免,理由随需求交付展示)"
 else
   echo "- 未登记"
   gap "[E2E] 无 e2e-smoke 证据行亦无显式豁免——冒烟未跑或未登记(验收能力缺失禁以现成必过检查顶替;格式见 gates.md 发布证据包节)"
@@ -211,7 +211,7 @@ cexm="$(grep -rhoE 'contract-check(：|:)[[:space:]]*豁免——.+' "${DIR}" --
 if [ -n "${cevi}" ]; then
   echo "- ${cevi}"
 elif [ -n "${cexm}" ]; then
-  echo "- ${cexm}(显式豁免,理由随人审)"
+  echo "- ${cexm}(显式豁免,理由随需求交付展示)"
 else
   echo "- 未登记"
   gap "[契约] 无 contract-check 证据行亦无显式豁免——契约未执行验证或未登记(格式见 gates.md 发布证据包节;生产判据 = jjtest contract-gates)"

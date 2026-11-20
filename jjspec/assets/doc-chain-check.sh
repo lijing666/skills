@@ -11,7 +11,10 @@
 #   4. 状态自洽（仅活跃区）：
 #      a) hld status=approved 时「方案批准记录」表残留「待批准」行即失败；
 #         status=draft 但批准表存在生效批准行（有效性列非待批准）即失败（旧批准冒充）
-#      b) prd status=已定稿 且存在版本表节时，版本表最后一个表格行须含「定稿」
+#      b) prd status=已定稿 且版本表表头含「四查」列时，版本表最后一个表格行须含「定稿」且含「通过」
+#         （宪法第八节定稿前四查；旧格式表头无「四查」列不追溯，存量零影响）
+#      c) prd 附D 区含 RESOLVED 的行须含「落点 =」（裁决落点，无落点不得标 RESOLVED；
+#         中文「已解决」等旧式写法不触发）
 #   5. 规范包同名唯一：ui-specs/ 按基础段（剥 -vN 后缀）分组，组内目录 >1 且未置「归档」者也 >1 即失败
 #      —— 整体改版 -vN 版本包与旧包并存属生命周期合法形态（旧包 README 状态=归档）；无状态行按未归档计（fail-closed）
 # 用法：doc-chain-check.sh <项目根> [--diff <基准>]
@@ -123,16 +126,31 @@ for req_dir in changes/*/; do
     fi
   fi
 
-  # 4b. prd 定稿与版本表一致
+  # 4b. prd 定稿与版本表一致 + 定稿前四查（表头含「四查」列才启用——旧格式存量不追溯）
   if [ -f "$prd" ] && [ "$prd_status" = "已定稿" ]; then
     if grep -q '^## 版本' "$prd"; then
-      last_row="$(sed -n '/^## 版本/,$p' "$prd" | grep '^|' | tail -1)"
+      # 版本表节 = 「## 版本」行起，至下一个非「版本」打头的 ## 节标题（附D 等后续表格行不混入）
+      ver_sec="$(sed -n '/^## 版本/,/^## [^版]/p' "$prd")"
+      last_row="$(printf '%s\n' "$ver_sec" | grep '^|' | tail -1)"
+      header_row="$(printf '%s\n' "$ver_sec" | grep '^|' | head -1)"
       case "$last_row" in
         *定稿*) : ;;
         "") fail "状态不自洽: ${prd#changes/} status=已定稿 但版本表无表格行" ;;
         *) fail "状态不自洽: ${prd#changes/} status=已定稿 但版本表最新行无「定稿」" ;;
       esac
+      case "$header_row" in
+        *四查*)
+          case "$last_row" in
+            *通过*) : ;;
+            *) fail "四查未通过: ${prd#changes/} 已定稿但版本表最新行「四查」列 ≠ 通过（宪法第八节定稿前四查；增删 REQ 修订后须重跑再请定稿）" ;;
+          esac ;;
+      esac
     fi
+  fi
+  # 4c. 附D RESOLVED 落点（裁决落点——决策与需求面断链防线；中文旧式写法不触发）
+  if [ -f "$prd" ] && grep -q '^## *附D\|^## 附D' "$prd" 2>/dev/null; then
+    res_row="$(sed -n '/^## *附D/,/^## /p' "$prd" | grep 'RESOLVED' | grep -v '落点 *=' || true)"
+    [ -n "$res_row" ] && fail "裁决断链: ${prd#changes/} 附D 存在无落点的 RESOLVED 行（宪法第八节：无落点不得标 RESOLVED，落点 = REQ/O/非目标/A/C）: $(echo "$res_row" | head -1 | cut -c1-80)"
   fi
 done
 
@@ -141,5 +159,5 @@ if [ "$FAIL" -eq 1 ]; then
   echo "DOC-CHAIN FAIL"
   exit 1
 fi
-echo "DOC-CHAIN PASS（嵌套/副本/悬空批准/状态自洽/规范包同名唯一 五项全绿）"
+echo "DOC-CHAIN PASS（嵌套/副本/悬空批准/状态自洽/四查/裁决落点/规范包同名唯一 全绿）"
 exit 0
