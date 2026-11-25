@@ -51,7 +51,7 @@ GWT 是业务语义层，不含界面操作知识——「When: 提交订单」�
 
 ### 环境契约（同 pixel-diff env.json 精神）
 
-- 每次执行落环境 sidecar `env.json`：`{"baseUrl":...,"env":"preview|staging","accountPool":...,"seedVersion":...,"runnerVersion":...}`——**环境错位 = 假结果**，冒烟环境须与灰度目标环境口径一致；不一致的结果无效，先对齐再谈归因。
+- 每次执行落环境 sidecar `env.json`：`{"baseUrl":...,"env":"preview|staging|uat","accountPool":...,"seedVersion":...,"runnerVersion":...}`——**环境错位 = 假结果**，冒烟环境须与灰度目标环境口径一致；不一致的结果无效，先对齐再谈归因。（`uat` 环境由接入管线生产，见 `uat-onboarding.md`）
 - 可复跑命令是证据行硬要求（`命令:<...>`）——环境不可复现的通过不算证据。
 
 ### 数据管理
