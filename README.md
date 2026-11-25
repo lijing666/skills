@@ -68,7 +68,7 @@ skills/
 | 多模块需求分册（PRD 分册） | 主指令：「用 jjspec 多模块需求 / 分册需求：<产品名>」（主 prd.md + prd-<序号>-<模块>.md 分册，spec/hld 仍单文件）；偶用迁移：「用 jjspec 拆分需求：<产品名>」把存量单文件 PRD 迁移拆分（均停在定稿前） |
 | 存量项目改造 | 「用 jjspec 改造 /path/to/项目」（走体检起步，渐进治理） |
 | 体系变更评估 | 「换模型/换 AI 工具了，先跑金丝雀任务集验证体系」（换模型/换宿主/大改规则前必做） |
-| 测试与质量建设（jjtest，三步走） | ①「用 jjtest 给 /path/to/项目 做测试盘点」→ 停靠确认风险排序与分期范围<br>②「用 jjspec 增加需求：\<需求名\>（分期计划见 quality/test-map.md）」→ 九步 SOP 推进，停靠点你只做决策：定稿→批准→继续→人审<br>③ 发布时「用 jjspec 生成 changes/\<需求ID\> 的发布证据包」→ 聚合 ⑥⑦ 证据行（验收 E2E 须已接 UAT，见下行），`--strict` 有缺口即拦 |
+| 测试与质量建设（jjtest，三步走） | ①「用 jjtest 给 /path/to/项目 做测试盘点」→ 停靠确认风险排序与分期范围<br>②「用 jjspec 增加需求：\<e2e 测试建设第 N 期\>」（分期计划见 quality/test-map.md，逐期立项）→ 九步 SOP 推进，停靠点你只做决策：定稿→批准→继续→人审<br>③ 发布时「用 jjspec 生成 changes/\<需求ID\> 的发布证据包」→ 聚合 ⑥⑦ 证据行（验收 E2E 须已接 UAT，见下行），`--strict` 有缺口即拦 |
 | UAT 环境接入（jjtest，一次性发布前置基建） | 「用 jjtest 给 /path/to/项目 接入 UAT」→ 产出 compose / Caddy / 流水线 / 门禁清单全部声明式进仓库；云资源、DNS、凭据、生产数据导出为人工前置（AI 只出清单）；适用 GitHub 仓库 + 单机容器化形态 |
 | 多端架构设计 | 「用 jjfullstack 设计 /path/to/项目 的多端架构」（触达小程序/移动端或多端选型时，产出 HLD 章节） |
 | 项目架构体检 | 「用 jjfullstack 给 /path/to/项目 做架构体检」（逐规则五态比对，产出 AGENTS.md 规则补丁） |
