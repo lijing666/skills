@@ -59,8 +59,8 @@ d="$(mk_case c5)"; sed -i '' 's/^status: 已定稿/status: 评审中/' "$d/chang
 expect "悬空批准（prd 未定稿）拦截" 1 "悬空批准" "$d"
 
 # ── 场景 6：免 PRD 修复 Spec（无 prd.md，spec approved）→ PASS
-d="$WORK/c6"; mkdir -p "$d/changes/fix-1"
-printf -- '---\nstatus: approved\n---\n# 修复 Spec\n' > "$d/changes/fix-1/spec.md"
+d="$WORK/c6"; mkdir -p "$d/changes/fix-login-timeout"
+printf -- '---\nstatus: approved\n---\n# 修复 Spec\n' > "$d/changes/fix-login-timeout/spec.md"
 expect "免 PRD 修复 Spec 不误伤" 0 "DOC-CHAIN PASS" "$d"
 
 # ── 场景 7：hld approved 但批准表残留待批准 → 拦
